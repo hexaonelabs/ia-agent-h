@@ -5,6 +5,7 @@ import { Assistant } from 'openai/resources/beta/assistants';
 import { Run } from 'openai/resources/beta/threads/runs/runs';
 import { tools } from '../tools/index.js';
 import { assistantPrompt } from '../const/prompt.js';
+import { parse } from 'marked';
 
 @Injectable()
 export class AgentService {
@@ -62,7 +63,7 @@ export class AgentService {
       // finally return the response
       return {
         threadId: thread.id,
-        message: response,
+        message: await parse(response),
       };
     } catch (error) {
       const message = `Error during chat: ${error instanceof Error ? error.message : 'Unknown error'}`;
@@ -152,8 +153,11 @@ export class AgentService {
     console.log(`💾 Handling tool calls for run ${run.id}`);
 
     const toolCalls = run.required_action?.submit_tool_outputs?.tool_calls;
-    if (!toolCalls) return run;
-
+    if (!toolCalls) {
+      console.log('ℹ No tool calls found');
+      return run;
+    }
+    console.log(`🔧 Found ${toolCalls.length} tool calls:`, toolCalls);
     const toolOutputs = await Promise.all(
       toolCalls.map(async (tool) => {
         const ToolConfig = tools[tool.function.name];
@@ -162,11 +166,12 @@ export class AgentService {
           return null;
         }
 
-        console.log(`💾 Executing: ${tool.function.name}`);
+        console.log(`💾 Executing: ${tool.function.name}...`);
 
         try {
           const args = JSON.parse(tool.function.arguments);
           const output = await ToolConfig.handler(args);
+          console.log(`🔧 Tool ${tool.function.name} output:`, output);
           return {
             tool_call_id: tool.id,
             output: String(output),
@@ -174,6 +179,7 @@ export class AgentService {
         } catch (error) {
           const errorMessage =
             error instanceof Error ? error.message : String(error);
+          console.log(`❌ Tool ${tool.function.name} error:`, errorMessage);
           return {
             tool_call_id: tool.id,
             output: `Error: ${errorMessage}`,

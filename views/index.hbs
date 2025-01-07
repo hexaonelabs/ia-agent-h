@@ -52,6 +52,7 @@
     </div>
     {{!-- <script type="module" src="/main.js"></script> --}}
     <script type="module">
+
       let currentThreadId;
       const mainContainer = document.querySelector('main');
       const messagesContainer = document.querySelector('.messages-container');
@@ -65,13 +66,13 @@
         messageDiv.className = `animate-fade-in animate-slide-up flex ${type === 'user' ? 'justify-end' : 'justify-start'}`;
         
         const messageContent = document.createElement('div');
-        messageContent.className = `max-w-[85%] p-4 rounded-2xl break-words ${
+        messageContent.className = `max-w-[85%] p-4 rounded-2xl break-words space-y-4" ${
           type === 'user' 
             ? 'bg-white/20 text-white' 
             : 'bg-white/10 text-white'
         }`;
         
-        messageContent.textContent = message;
+        messageContent.innerHTML = message;
         messageDiv.appendChild(messageContent);
         return messageDiv;
       }
