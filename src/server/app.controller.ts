@@ -35,20 +35,20 @@ export class AppController {
       | string;
     success: boolean;
   }> {
-    return {
-      data: {
-        message: body.userInput,
-        threadId: body.threadId,
-      },
-      success: true,
-    };
-    // const response = await this._agentService
-    //   .sendMessage(body)
-    //   .then((data) => ({ data, success: true }))
-    //   .catch((error) => ({
-    //     data: error instanceof Error ? error.message : 'Unknown error',
-    //     success: false,
-    //   }));
-    // return response;
+    // return {
+    //   data: {
+    //     message: body.userInput,
+    //     threadId: body.threadId,
+    //   },
+    //   success: true,
+    // };
+    const response = await this._agentService
+      .sendMessage(body)
+      .then((data) => ({ data, success: true }))
+      .catch((error) => ({
+        data: error instanceof Error ? error.message : 'Unknown error',
+        success: false,
+      }));
+    return response;
   }
 }
