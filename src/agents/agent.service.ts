@@ -6,7 +6,7 @@ import { Run } from 'openai/resources/beta/threads/runs/runs';
 import { tools } from '../tools/index.js';
 import { assistantPrompt } from '../const/prompt.js';
 import { parse } from 'marked';
-import { TwitterApi } from 'twitter-api-v2';
+import { XAgentService } from './x-agent.service.js';
 
 @Injectable()
 export class AgentService {
@@ -16,9 +16,10 @@ export class AgentService {
   private readonly inMemoryThreadsMesssages: Record<string, string[]> = {};
   constructor() {
     this._client = new OpenAI();
-    this._createAssistant(this._client, 'agentH_xAgent').then((assistant) => {
-      this._respondToMentions(assistant);
+    this._createAssistant(this._client).then((assistant) => {
+      this._assistant = assistant;
     });
+    this._manageAgents();
   }
 
   async createThread() {
@@ -209,67 +210,12 @@ export class AgentService {
     );
   }
 
-  private async _respondToMentions(agent: Assistant) {
-    console.log('🏗  Building Twitter client...');
-    const TIMEOUT = 60 * 5 * 1000;
-    let t;
-    try {
-      const xClient = new TwitterApi(
-        // process.env.TWITTER_BEARER_TOKEN,
-        {
-          appKey: process.env.TWITTER_APP_KEY,
-          appSecret: process.env.TWITTER_APP_SECRET,
-          accessToken: process.env.TWITTER_ACCESS_TOKEN,
-          accessSecret: process.env.TWITTER_ACCESS_SECRET,
-          // password: process.env.TWITTER_PASSWORD,
-          // username: process.env.TWITTER_USERNAME,
-          // clientId: process.env.TWITTER_CLIENT_ID,
-          // clientSecret: process.env.TWITTER_CLIENT_SECRET,
-        },
-      );
-      const userId = process.env.TWITTER_ACCOUNT_ID;
-      const rwClient = xClient.readWrite;
-      await rwClient.appLogin();
-      const currentUser = await rwClient.currentUser();
-      console.log(`👤 IA Agent is connected as @${currentUser.screen_name}`);
-      console.log('🔍 Searching for mentions...');
-      const mentions = await rwClient.v2.userMentionTimeline(userId);
-      for (const mention of mentions) {
-        if (mention.text.includes(process.env.TWITTER_USERNAME)) {
-          console.log(`🛎 Found Mention with post ID: ${mention.id}:`, mention);
-          console.log(`⌛ Loading tweet details...`);
-          // get tweet details to find author_id
-          const tweetDetails = await rwClient.v2.singleTweet(mention.id, {
-            expansions: ['author_id'],
-          });
-          const authorId = tweetDetails.data.author_id;
-          // get user details from author_id
-          const user = await rwClient.v2.user(authorId);
-          const userName = user.data.name;
-          const response = `@${userName} Thanks for mentioning me! I'm currently in development and will be able to respond to your messages soon. Stay tuned! 🤖🚀`;
-          console.log(`📣 Responding to @${userName}: ${response}`);
-          await rwClient.v2.reply(response, mention.id);
-          console.log(`✅ Replied to @${userName}`);
-        }
-      }
-      t = setTimeout(async () => {
-        await this._respondToMentions(agent);
-        clearTimeout(t);
-      }, TIMEOUT);
-    } catch (error) {
-      clearTimeout(t);
-      console.error(
-        '❌ Error responding to mentions:',
-        error?.data?.detail || error.message,
-      );
-      const limit = error?.rateLimit?.reset
-        ? error?.rateLimit?.reset * 1000 - Date.now()
-        : TIMEOUT;
-      console.log(`🕒 Retrying in ${limit} seconds...`);
-      t = setTimeout(async () => {
-        await this._respondToMentions(agent);
-        clearTimeout(t);
-      }, limit);
-    }
+  private async _manageAgents() {
+    await new Promise((resolve) => setTimeout(resolve, 5000)); // Wait 5 second
+    const availableAgents = [XAgentService];
+    availableAgents.forEach(async (Agent) => {
+      const agent = new Agent(this._client);
+      await agent.start();
+    });
   }
 }
