@@ -35,11 +35,14 @@ export class XAgentService {
 
   private async _mentionsMonitoring() {
     const TIMEOUT = 60 * 5 * 1000;
+    const delay = (ms: number) =>
+      new Promise((resolve) => setTimeout(resolve, ms));
     let t;
     try {
       const userId = process.env.TWITTER_ACCOUNT_ID;
       const rwClient = this._xClient.readWrite;
       const currentUser = await rwClient.currentUser();
+      await delay(10000);
       console.log('[XAgent] 🔍 Searching for mentions...');
       // check if agent have existing pending mentions to reply
       const pendingMentions = Object.values(this._mentionsToReply);
@@ -53,6 +56,7 @@ export class XAgentService {
               }
               return Object.values(this._mentionsToReply);
             });
+      await delay(5000);
       for (const mention of mentions) {
         if (mention.text.includes(process.env.TWITTER_USERNAME)) {
           console.log(
@@ -61,14 +65,15 @@ export class XAgentService {
           );
           console.log(`[XAgent] ⌛ Loading tweet details...`);
           // get tweet details to find author_id
-          const tweetDetails = await rwClient.v2.singleTweet(mention.id, {
+          const tweetDetails = await this._xClient.v2.singleTweet(mention.id, {
             expansions: ['author_id'],
           });
+          await delay(5000);
           const authorId = tweetDetails.data.author_id;
           // get user details from author_id
           const user = await rwClient.v2.user(authorId);
           const userName = user.data.name;
-
+          await delay(5000);
           // check if the tweet already has a response from the current user
           const replies = await rwClient.v2.search(
             `to:${currentUser.screen_name} conversation_id:${mention.id}`,
@@ -87,6 +92,7 @@ export class XAgentService {
             // remove mention from pending mentions
             delete this._mentionsToReply[mention.id];
           }
+          await delay(5000);
         }
       }
       t = setTimeout(async () => {
