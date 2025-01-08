@@ -5,6 +5,7 @@ import { getContractAbiTool } from './getContractAbi.js';
 import { getTransactionReceiptTool } from './getTransactionReceipt.js';
 import { getTokenBalanceTool } from './getTokenBalance.js';
 import { getMarketDataTool } from './getMarketData.js';
+import { depositAaveTool } from './depositToAAVE.js';
 // import { sendTransactionTool } from './sendTransaction.js';
 // import { writeContractTool } from './writeContract.js';
 // import { deployErc20Tool } from './deployErc20.js';
@@ -39,6 +40,7 @@ export const readTools: Record<string, any> = {
 };
 
 export const writeTools: Record<string, ToolConfig> = {
+  deposit_to_aave: depositAaveTool,
   // send_transaction: sendTransactionTool,
   // write_contract: writeContractTool,
   // deploy_erc20: deployErc20Tool,

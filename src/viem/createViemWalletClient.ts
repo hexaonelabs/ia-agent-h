@@ -5,7 +5,7 @@ import {
   mnemonicToAccount,
   privateKeyToAccount,
 } from 'viem/accounts';
-import { abstractTestnet } from 'viem/chains';
+import { sepolia } from 'viem/chains';
 // import { eip712WalletActions } from 'viem/zksync';
 
 export const createViemWalletClient = (): WalletClient => {
@@ -23,7 +23,7 @@ export const createViemWalletClient = (): WalletClient => {
 
   const wallet = createWalletClient({
     account,
-    chain: abstractTestnet,
+    chain: sepolia,
     transport: http(),
   }); //.extend(eip712WalletActions());
   return wallet;
