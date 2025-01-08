@@ -1,7 +1,7 @@
 import { Injectable } from '@nestjs/common';
 import OpenAI from 'openai';
 import { assistantPrompt } from '../const/prompt';
-import { TweetV2, TwitterApi } from 'twitter-api-v2';
+import { TweetV2, TwitterApi, UserV1 } from 'twitter-api-v2';
 import * as dayjs from 'dayjs';
 
 @Injectable()
@@ -9,6 +9,7 @@ export class XAgentService {
   private readonly _client: OpenAI;
   private readonly _xClient: TwitterApi;
   private readonly _mentionsToReply: Record<string, TweetV2> = {};
+  private _currentUser: UserV1 | undefined = undefined;
 
   constructor(client: OpenAI) {
     this._client = client;
@@ -26,9 +27,9 @@ export class XAgentService {
     console.log(`[XAgent] ${dayjs().format()} 🚀 Starting IA Agent...`);
     const rwClient = this._xClient.readWrite;
     await rwClient.appLogin();
-    const currentUser = await rwClient.currentUser();
+    this._currentUser = await rwClient.currentUser();
     console.log(
-      `[XAgent] ${dayjs().format()} 👤 IA Agent is connected as @${currentUser.screen_name}`,
+      `[XAgent] ${dayjs().format()} 👤 IA Agent is connected as @${this._currentUser?.screen_name}`,
     );
     await this._mentionsMonitoring();
   }
@@ -82,9 +83,8 @@ export class XAgentService {
             `[XAgent] ${dayjs().format()} ⌛ filtering mention without reply...`,
           );
           // check if the tweet already has a response from the current user
-          const currentUser = await rwClient.currentUser();
           const replies = await rwClient.v2.search(
-            `to:${currentUser.screen_name} conversation_id:${mention.id}`,
+            `to:${this._currentUser?.screen_name} conversation_id:${mention.id}`,
           );
           const hasReplied = replies?.data?.data?.some(
             (reply) => reply.author_id === userId,
