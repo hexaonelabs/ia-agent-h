@@ -211,6 +211,7 @@ export class AgentService {
 
   private async _respondToMentions(agent: Assistant) {
     console.log('🏗  Building Twitter client...');
+    const TIMEOUT = 60 * 5 * 1000;
     let t;
     try {
       const xClient = new TwitterApi(
@@ -230,25 +231,31 @@ export class AgentService {
       const rwClient = xClient.readWrite;
       await rwClient.appLogin();
       const currentUser = await rwClient.currentUser();
-
-      console.log(`👤 Connected as @${currentUser.screen_name}`);
+      console.log(`👤 IA Agent is connected as @${currentUser.screen_name}`);
+      console.log('🔍 Searching for mentions...');
       const mentions = await rwClient.v2.userMentionTimeline(userId);
-      console.log(
-        `🚀 Responding to ${Object.values(mentions).length} mentions...`,
-      );
       for (const mention of mentions) {
-        console.log(`📣 Mention from @${mention.author_id}:`, mention);
         if (mention.text.includes(process.env.TWITTER_USERNAME)) {
-          const response = `@${mention.author_id} Merci pour votre mention !`;
-          console.log(`📣 Responding to @${mention.author_id}: ${response}`);
+          console.log(`🛎 Found Mention with post ID: ${mention.id}:`, mention);
+          console.log(`⌛ Loading tweet details...`);
+          // get tweet details to find author_id
+          const tweetDetails = await rwClient.v2.singleTweet(mention.id, {
+            expansions: ['author_id'],
+          });
+          const authorId = tweetDetails.data.author_id;
+          // get user details from author_id
+          const user = await rwClient.v2.user(authorId);
+          const userName = user.data.name;
+          const response = `@${userName} Thanks for mentioning me! I'm currently in development and will be able to respond to your messages soon. Stay tuned! 🤖🚀`;
+          console.log(`📣 Responding to @${userName}: ${response}`);
           await rwClient.v2.reply(response, mention.id);
-          console.log(`📣 Replied to @${mention.author_id}`);
+          console.log(`✅ Replied to @${userName}`);
         }
       }
       t = setTimeout(async () => {
         await this._respondToMentions(agent);
         clearTimeout(t);
-      }, 60000);
+      }, TIMEOUT);
     } catch (error) {
       clearTimeout(t);
       console.error(
@@ -257,7 +264,7 @@ export class AgentService {
       );
       const limit = error?.rateLimit?.reset
         ? error?.rateLimit?.reset * 1000 - Date.now()
-        : 60 * 10 * 1000;
+        : TIMEOUT;
       console.log(`🕒 Retrying in ${limit} seconds...`);
       t = setTimeout(async () => {
         await this._respondToMentions(agent);
