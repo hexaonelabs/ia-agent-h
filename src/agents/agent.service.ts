@@ -6,6 +6,7 @@ import { Run } from 'openai/resources/beta/threads/runs/runs';
 import { tools } from '../tools/index.js';
 import { assistantPrompt } from '../const/prompt.js';
 import { parse } from 'marked';
+import { TwitterApi } from 'twitter-api-v2';
 
 @Injectable()
 export class AgentService {
@@ -15,6 +16,9 @@ export class AgentService {
   private readonly inMemoryThreadsMesssages: Record<string, string[]> = {};
   constructor() {
     this._client = new OpenAI();
+    this._createAssistant(this._client, 'agentH_xAgent').then((assistant) => {
+      this._respondToMentions(assistant);
+    });
   }
 
   async createThread() {
@@ -71,12 +75,17 @@ export class AgentService {
     }
   }
 
-  private async _createAssistant(client: OpenAI): Promise<Assistant> {
+  private async _createAssistant(
+    client: OpenAI,
+    name = 'AgentH',
+    instructions = assistantPrompt,
+    toolsAvailable = Object.values(tools).map((tool) => tool.definition),
+  ): Promise<Assistant> {
     return await client.beta.assistants.create({
       model: 'gpt-4o-mini',
-      name: 'AgentH',
-      instructions: assistantPrompt,
-      tools: Object.values(tools).map((tool) => tool.definition),
+      name,
+      instructions,
+      tools: toolsAvailable,
     });
   }
 
@@ -198,5 +207,62 @@ export class AgentService {
       run.id,
       { tool_outputs: validOutputs },
     );
+  }
+
+  private async _respondToMentions(agent: Assistant) {
+    console.log('🏗  Building Twitter client...');
+    let t;
+    try {
+      const xClient = new TwitterApi(
+        // process.env.TWITTER_BEARER_TOKEN,
+        {
+          appKey: process.env.TWITTER_APP_KEY,
+          appSecret: process.env.TWITTER_APP_SECRET,
+          accessToken: process.env.TWITTER_ACCESS_TOKEN,
+          accessSecret: process.env.TWITTER_ACCESS_SECRET,
+          // password: process.env.TWITTER_PASSWORD,
+          // username: process.env.TWITTER_USERNAME,
+          // clientId: process.env.TWITTER_CLIENT_ID,
+          // clientSecret: process.env.TWITTER_CLIENT_SECRET,
+        },
+      );
+      const userId = process.env.TWITTER_ACCOUNT_ID;
+      const rwClient = xClient.readWrite;
+      await rwClient.appLogin();
+      const currentUser = await rwClient.currentUser();
+
+      console.log(`👤 Connected as @${currentUser.screen_name}`);
+      const mentions = await rwClient.v2.userMentionTimeline(userId);
+      console.log(
+        `🚀 Responding to ${Object.values(mentions).length} mentions...`,
+      );
+      for (const mention of mentions) {
+        console.log(`📣 Mention from @${mention.author_id}:`, mention);
+        if (mention.text.includes(process.env.TWITTER_USERNAME)) {
+          const response = `@${mention.author_id} Merci pour votre mention !`;
+          console.log(`📣 Responding to @${mention.author_id}: ${response}`);
+          await rwClient.v2.reply(response, mention.id);
+          console.log(`📣 Replied to @${mention.author_id}`);
+        }
+      }
+      t = setTimeout(async () => {
+        await this._respondToMentions(agent);
+        clearTimeout(t);
+      }, 60000);
+    } catch (error) {
+      clearTimeout(t);
+      console.error(
+        '❌ Error responding to mentions:',
+        error?.data?.detail || error.message,
+      );
+      const limit = error?.rateLimit?.reset
+        ? error?.rateLimit?.reset * 1000 - Date.now()
+        : 60 * 10 * 1000;
+      console.log(`🕒 Retrying in ${limit} seconds...`);
+      t = setTimeout(async () => {
+        await this._respondToMentions(agent);
+        clearTimeout(t);
+      }, limit);
+    }
   }
 }
