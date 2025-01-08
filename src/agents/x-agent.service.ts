@@ -41,7 +41,6 @@ export class XAgentService {
     try {
       const userId = process.env.TWITTER_ACCOUNT_ID;
       const rwClient = this._xClient.readWrite;
-      const currentUser = await rwClient.currentUser();
       await delay(10000);
       console.log('[XAgent] 🔍 Searching for mentions...');
       // check if agent have existing pending mentions to reply
@@ -50,12 +49,14 @@ export class XAgentService {
       const mentions =
         pendingMentions.length > 0
           ? Object.values(this._mentionsToReply)
-          : await rwClient.v2.userMentionTimeline(userId).then((m) => {
-              for (const mention of m) {
-                this._mentionsToReply[mention.id] = mention;
-              }
-              return Object.values(this._mentionsToReply);
-            });
+          : await this._xClient.readOnly.v2
+              .userMentionTimeline(userId)
+              .then((m) => {
+                for (const mention of m) {
+                  this._mentionsToReply[mention.id] = mention;
+                }
+                return Object.values(this._mentionsToReply);
+              });
       await delay(5000);
       for (const mention of mentions) {
         if (mention.text.includes(process.env.TWITTER_USERNAME)) {
@@ -65,16 +66,19 @@ export class XAgentService {
           );
           console.log(`[XAgent] ⌛ Loading tweet details...`);
           // get tweet details to find author_id
-          const tweetDetails = await this._xClient.v2.singleTweet(mention.id, {
+          const tweetDetails = await rwClient.v2.singleTweet(mention.id, {
             expansions: ['author_id'],
           });
           await delay(5000);
           const authorId = tweetDetails.data.author_id;
+          console.log(`[XAgent] ⌛ User details...`);
           // get user details from author_id
           const user = await rwClient.v2.user(authorId);
           const userName = user.data.name;
           await delay(5000);
+          console.log(`[XAgent] ⌛ filtering mention without reply...`);
           // check if the tweet already has a response from the current user
+          const currentUser = await rwClient.currentUser();
           const replies = await rwClient.v2.search(
             `to:${currentUser.screen_name} conversation_id:${mention.id}`,
           );
