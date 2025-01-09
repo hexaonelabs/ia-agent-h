@@ -36,6 +36,7 @@
     "axios": "^1.7.9",
     "dayjs": "^1.11.13",
     "hbs": "^4.2.0",
+    "js-yaml": "^4.1.0",
     "marked": "^15.0.6",
     "openai": "^4.77.3",
     "reflect-metadata": "^0.1.13",

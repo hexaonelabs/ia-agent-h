@@ -1,4 +1,3 @@
-import { Injectable } from '@nestjs/common';
 import OpenAI from 'openai';
 import { assistantPrompt, xAgentPrompt } from '../const/prompt';
 import { TweetV2, TwitterApi, UserV1 } from 'twitter-api-v2';
@@ -6,7 +5,6 @@ import * as dayjs from 'dayjs';
 import * as fs from 'fs';
 import * as p from 'path';
 
-@Injectable()
 export class XAgentService {
   private readonly _client: OpenAI;
   private readonly _xClient: TwitterApi;

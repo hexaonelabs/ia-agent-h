@@ -3,18 +3,21 @@ import OpenAI from 'openai';
 import { Thread } from 'openai/resources/beta/threads/threads';
 import { Assistant } from 'openai/resources/beta/assistants';
 import { Run } from 'openai/resources/beta/threads/runs/runs';
-import { tools } from '../tools/index.js';
-import { assistantPrompt } from '../const/prompt.js';
+import { tools } from '../tools/index';
+import { assistantPrompt } from '../const/prompt';
 import { parse } from 'marked';
-import { XAgentService } from './x-agent.service.js';
-import { MarketAgentService } from './market-agent.service.js';
+import * as p from 'path';
+import { getAgentsEnabled } from '../utils';
+import { CustomLogger } from '../logger.service';
 
 @Injectable()
 export class AgentService {
   private readonly _client: OpenAI;
   private _assistant: Assistant;
+  private _managedAgents: Record<string, any> = {};
   public readonly threads: Thread[] = [];
   private readonly inMemoryThreadsMesssages: Record<string, string[]> = {};
+  private readonly _logger = new CustomLogger(AgentService.name);
   constructor() {
     this._client = new OpenAI();
     this._createAssistant(this._client).then((assistant) => {
@@ -109,7 +112,7 @@ export class AgentService {
 
   private async _createRun(thread: Thread): Promise<Run> {
     const assistantId = this._assistant.id;
-    console.log(
+    this._logger.log(
       `🚀 Creating run for thread ${thread.id} with assistant ${assistantId}`,
     );
     let run = await this._client.beta.threads.runs.create(thread.id, {
@@ -124,7 +127,7 @@ export class AgentService {
   }
 
   private async _performRun(run: Run, thread: Thread) {
-    console.log(`🚀 Performing run ${run.id}`);
+    this._logger.log(`🚀 Performing run ${run.id}`);
     // execute action to call if status is requires_action
     while (run.status === 'requires_action') {
       run = await this._handleRunToolCalls(run, thread);
@@ -132,7 +135,7 @@ export class AgentService {
     // manage error if status is failed
     if (run.status === 'failed') {
       const errorMessage = `I encountered an error: ${run.last_error?.message || 'Unknown error'}`;
-      console.error('Run failed:', run.last_error);
+      this._logger.error('Run failed:', run.last_error);
       await this._client.beta.threads.messages.create(thread.id, {
         role: 'assistant',
         content: errorMessage,
@@ -150,7 +153,7 @@ export class AgentService {
     const assistantMessage = messages.data.find(
       (message) => message.role === 'assistant',
     );
-    console.log(`🚀 Assistant message:`, assistantMessage?.content[0]);
+    this._logger.log(`🚀 Assistant message:`, assistantMessage?.content[0]);
     // return response or default message
     return (
       assistantMessage?.content[0] || {
@@ -161,28 +164,28 @@ export class AgentService {
   }
 
   private async _handleRunToolCalls(run: Run, thread: Thread): Promise<Run> {
-    console.log(`💾 Handling tool calls for run ${run.id}`);
+    this._logger.log(`💾 Handling tool calls for run ${run.id}`);
 
     const toolCalls = run.required_action?.submit_tool_outputs?.tool_calls;
     if (!toolCalls) {
-      console.log('ℹ No tool calls found');
+      this._logger.log('ℹ No tool calls found');
       return run;
     }
-    console.log(`🔧 Found ${toolCalls.length} tool calls:`, toolCalls);
+    this._logger.log(`🔧 Found ${toolCalls.length} tool calls:`, toolCalls);
     const toolOutputs = await Promise.all(
       toolCalls.map(async (tool) => {
         const ToolConfig = tools[tool.function.name];
         if (!ToolConfig) {
-          console.error(`Tool ${tool.function.name} not found`);
+          this._logger.error(`Tool ${tool.function.name} not found`);
           return null;
         }
 
-        console.log(`💾 Executing: ${tool.function.name}...`);
+        this._logger.log(`💾 Executing: ${tool.function.name}...`);
 
         try {
           const args = JSON.parse(tool.function.arguments);
           const output = await ToolConfig.handler(args);
-          console.log(`🔧 Tool ${tool.function.name} output:`, output);
+          this._logger.log(`🔧 Tool ${tool.function.name} output:`, output);
           return {
             tool_call_id: tool.id,
             output: String(output),
@@ -190,7 +193,10 @@ export class AgentService {
         } catch (error) {
           const errorMessage =
             error instanceof Error ? error.message : String(error);
-          console.log(`❌ Tool ${tool.function.name} error:`, errorMessage);
+          this._logger.log(
+            `❌ Tool ${tool.function.name} error:`,
+            errorMessage,
+          );
           return {
             tool_call_id: tool.id,
             output: `Error: ${errorMessage}`,
@@ -213,10 +219,27 @@ export class AgentService {
 
   private async _manageAgents() {
     await new Promise((resolve) => setTimeout(resolve, 5000)); // Wait 5 second
-    const availableAgents = [XAgentService, MarketAgentService];
-    availableAgents.forEach(async (Agent) => {
-      const agent = new Agent(this._client);
-      await agent.start();
+    // load agents list from `agents.config.yml` file
+    const path = p.join(process.cwd(), 'agents.config.yml');
+    const availableAgents = getAgentsEnabled(path);
+    this._logger.log(
+      `🤖 Agents enabled: ${availableAgents.map((agent) => agent.name).join(', ')}`,
+    );
+    // const availableAgents = [MarketAgentService];
+    availableAgents.forEach(async ({ name, ...args }) => {
+      try {
+        const fileName = name.toLowerCase().replace('agent', '.agent.js'); // myagent.agent.ts
+        const path = p.join(__dirname, fileName);
+        const agent = await import(path).then((module) => module[name]);
+        const instance = new agent(this._client, args);
+        await instance.start();
+        this._managedAgents[name] = instance;
+        this._logger.log(`🤖 Agent ${name} started`);
+      } catch (error) {
+        this._logger.error(
+          `🤖 Agent ${name} error: ${error?.message ? error?.message : ''}`,
+        );
+      }
     });
   }
 }

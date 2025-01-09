@@ -1,0 +1,5 @@
+Agents_list: 
+  - name: "xAgent"
+    enabled: true
+  - name: "MarketAgent"
+    enabled: true
