@@ -6,6 +6,8 @@ import { getTransactionReceiptTool } from './getTransactionReceipt.js';
 import { getTokenBalanceTool } from './getTokenBalance.js';
 import { getMarketDataTool } from './getMarketData.js';
 import { depositAaveTool } from './depositToAAVE.js';
+import { writeCodeToFileTool } from './writeCodeToFile.js';
+import { executeUnitTestTool } from './executeUnitTest.js';
 // import { sendTransactionTool } from './sendTransaction.js';
 // import { writeContractTool } from './writeContract.js';
 // import { deployErc20Tool } from './deployErc20.js';
@@ -46,6 +48,8 @@ export const writeTools: Record<string, ToolConfig> = {
   // deploy_erc20: deployErc20Tool,
   // create_uniswap_v3_pool: uniswapV3CreatePoolTool,
   // approve_token_allowance: approveTokenAllowanceTool,
+  write_code_to_file: writeCodeToFileTool,
+  execute_unit_test: executeUnitTestTool,
 };
 
 export const tools: Record<string, ToolConfig> = {
