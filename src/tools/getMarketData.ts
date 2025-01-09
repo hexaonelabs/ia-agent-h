@@ -43,34 +43,9 @@ export const getMarketDataTool: ToolConfig<GetMarketDataArgs> = {
   definition: {
     type: 'function',
     function: {
+      strict: true,
       name: 'get_market_data',
-      description: `Get the current market data for a cryptocurrency using ticker symbol to request Coingecko API and return a structured JSON response with the following fields: 
-  id: string;
-  symbol: string;
-  name: string;
-  image: string;
-  current_price: number;
-  market_cap: number;
-  market_cap_rank: number;
-  fully_diluted_valuation: number;
-  total_volume: number;
-  high_24h: number;
-  low_24h: number;
-  price_change_24h: number;
-  price_change_percentage_24h: number;
-  market_cap_change_24h: number;
-  market_cap_change_percentage_24h: number;
-  circulating_supply: number;
-  total_supply: number;
-  max_supply: number;
-  ath: number;
-  ath_change_percentage: number;
-  ath_date: Date;
-  atl: number;
-  atl_change_percentage: number;
-  atl_date: Date;
-  roi: any;
-  last_updated: Date;
+      description: `Get the current market data for a cryptocurrency using ticker symbol to request Coingecko API.
       `,
       parameters: {
         type: 'object',
@@ -80,22 +55,19 @@ export const getMarketDataTool: ToolConfig<GetMarketDataArgs> = {
             description:
               'The ticker symbol of the cryptocurrency to get market data for',
           },
-          forceRefresh: {
-            type: 'boolean',
-            description: 'Force refresh the coin list cache',
-            default: false,
-          },
         },
         required: ['ticker'],
+        additionalProperties: false,
       },
     },
   },
-  handler: async ({ ticker, forceRefresh }): Promise<IMarketData> => {
+  handler: async ({ ticker, forceRefresh }): Promise<string> => {
     const coinId = await getCoinIdFromTicker(ticker, forceRefresh);
     if (!coinId) {
       throw new Error(`Coin ID not found for ticker: ${ticker}`);
     }
-    return await getMarketData(coinId);
+    const data = await getMarketData(coinId);
+    return JSON.stringify(data);
   },
 };
 
