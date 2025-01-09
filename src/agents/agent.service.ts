@@ -7,6 +7,7 @@ import { tools } from '../tools/index.js';
 import { assistantPrompt } from '../const/prompt.js';
 import { parse } from 'marked';
 import { XAgentService } from './x-agent.service.js';
+import { MarketAgentService } from './market-agent.service.js';
 
 @Injectable()
 export class AgentService {
@@ -212,7 +213,7 @@ export class AgentService {
 
   private async _manageAgents() {
     await new Promise((resolve) => setTimeout(resolve, 5000)); // Wait 5 second
-    const availableAgents = [XAgentService];
+    const availableAgents = [XAgentService, MarketAgentService];
     availableAgents.forEach(async (Agent) => {
       const agent = new Agent(this._client);
       await agent.start();
