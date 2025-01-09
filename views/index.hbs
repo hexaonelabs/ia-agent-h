@@ -86,6 +86,19 @@
       }
 
       async function sendMessage(message) {
+        if (message === 'logs') {
+          const response = await fetch('/api/logs', {
+            method: 'GET',
+            headers: {
+              'Content-Type': 'application/json',
+            },
+          });
+          
+          if (!response.ok) throw new Error('Failed to get response');
+          const { data = [] } = await response.json();
+          addMessage(data.join('<br>'), 'assistant');
+          return;
+        }
         try {
           const response = await fetch('/api/prompt', {
             method: 'POST',

@@ -2,6 +2,8 @@ import { Body, Controller, Get, Post, Render } from '@nestjs/common';
 import { AppService } from './app.service';
 import { AgentService } from '../agents/agent.service';
 import { createViemWalletClient } from 'src/viem/createViemWalletClient';
+import * as fs from 'fs';
+import * as p from 'path';
 
 @Controller()
 export class AppController {
@@ -50,5 +52,24 @@ export class AppController {
         success: false,
       }));
     return response;
+  }
+
+  @Get('api/logs')
+  async getLogs() {
+    try {
+      // read logs from app.logs
+      const path = p.join(process.cwd(), 'app.log');
+      const logs = fs.readFileSync(path, 'utf8');
+      const logsArray = logs.split('\n');
+      return {
+        data: logsArray,
+        success: true,
+      };
+    } catch (error) {
+      return {
+        data: error instanceof Error ? error.message : 'Unknown error',
+        success: false,
+      };
+    }
   }
 }
