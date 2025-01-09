@@ -6,7 +6,7 @@ interface GetMarketDataArgs {
   forceRefresh?: boolean;
 }
 
-interface IMarketData {
+export interface IMarketData {
   id: string;
   symbol: string;
   name: string;
@@ -103,7 +103,7 @@ async function getCoinIdFromTicker(
   }
 }
 
-async function getMarketData(coinId: string): Promise<IMarketData> {
+async function getMarketData(coinId: string): Promise<IMarketData[]> {
   try {
     const response = await axios.get(
       `https://api.coingecko.com/api/v3/coins/markets`,
