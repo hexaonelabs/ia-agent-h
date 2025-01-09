@@ -11,7 +11,7 @@ pnpm-debug.log*
 yarn-debug.log*
 yarn-error.log*
 lerna-debug.log*
-replied_tweet_ids.json
+replied_tweet_ids.csv
 
 # OS
 .DS_Store

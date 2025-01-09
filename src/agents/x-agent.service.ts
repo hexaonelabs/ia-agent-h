@@ -14,7 +14,7 @@ export class XAgentService {
   private readonly _REPLYED_TWEET_IDS_FILE_PATH = p.join(
     process.cwd(),
     'public',
-    'replied_tweet_ids.json',
+    'replied_tweet_ids.csv',
   );
 
   constructor(client: OpenAI) {
