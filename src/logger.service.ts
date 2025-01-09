@@ -52,6 +52,10 @@ export class CustomLogger extends ConsoleLogger implements LoggerService {
   }
 
   private _writeToFile(message: string, logLevel: LogLevel = 'log') {
+    // disable logging on development mode
+    if (process.env.NODE_ENV !== 'production') {
+      return;
+    }
     const pidMessage = this.formatPid(process.pid);
     const contextMessage = this.formatContext(this.context);
     const timestampDiff = this.updateAndGetTimestampDiff();
