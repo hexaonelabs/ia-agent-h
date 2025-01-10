@@ -42,6 +42,7 @@ replied_tweet_ids.csv
 .env.test.local
 .env.production.local
 .env.local
+agents.config.yml
 
 # temp directory
 .temp
