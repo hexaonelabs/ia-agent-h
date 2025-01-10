@@ -58,7 +58,7 @@ export class AppController {
   async getLogs() {
     try {
       // read logs from app.logs
-      const path = p.join(process.cwd(), 'app.log');
+      const path = p.join(process.cwd(), 'public/logs', 'app.log');
       const logs = fs.readFileSync(path, 'utf8');
       const logsArray = logs.split('\n');
       return {

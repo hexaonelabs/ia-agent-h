@@ -86,7 +86,7 @@
       }
 
       async function sendMessage(message) {
-        if (message === 'logs') {
+        if (message === ':logs') {
           const response = await fetch('/api/logs', {
             method: 'GET',
             headers: {
