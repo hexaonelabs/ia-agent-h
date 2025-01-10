@@ -12,11 +12,19 @@ export class XAgent {
   private readonly _mentionsToReply: Record<string, TweetV2> = {};
   private _currentUser: UserV1 | undefined = undefined;
   // file located to root `public` directory
-  private readonly _REPLYED_TWEET_IDS_FILE_PATH = p.join(
+  private readonly _REPLYED_TWEET_DATE_FILE_PATH = p.join(
     process.cwd(),
     'public',
-    'replied_tweet_ids.csv',
+    'logs',
+    'last_replied_tweet_date.log',
   );
+  private readonly _LAST_GM_TWEET_DATE_FILE_PATH = p.join(
+    process.cwd(),
+    'public',
+    'logs',
+    'last_gm_tweet_date.log',
+  );
+
   private readonly _logger = new CustomLogger(XAgent.name);
 
   constructor(client: OpenAI) {
@@ -40,14 +48,20 @@ export class XAgent {
       `👤 IA Agent is connected as @${this._currentUser?.screen_name}`,
     );
     // ensure that the `_REPLYED_TWEET_IDS_FILE_PATH` file exist
-    if (!fs.existsSync(this._REPLYED_TWEET_IDS_FILE_PATH)) {
-      fs.writeFileSync(this._REPLYED_TWEET_IDS_FILE_PATH, '');
+    if (!fs.existsSync(this._REPLYED_TWEET_DATE_FILE_PATH)) {
+      fs.writeFileSync(this._REPLYED_TWEET_DATE_FILE_PATH, '');
     }
-    await this._mentionsMonitoring();
+    // ensure that the `_LAST_GM_TWEET_DATE_FILE_PATH` file exist
+    if (!fs.existsSync(this._LAST_GM_TWEET_DATE_FILE_PATH)) {
+      fs.writeFileSync(this._LAST_GM_TWEET_DATE_FILE_PATH, '');
+    }
+    this._mentionsMonitoring();
+    this._sayGM();
+    // this._searchForNewAccountsToConnectWith();
   }
 
   private async _mentionsMonitoring() {
-    const TIMEOUT = 60 * 5 * 1000;
+    const TIMEOUT = 60 * 15 * 1000;
     const delay = (ms: number) =>
       new Promise((resolve) => setTimeout(resolve, ms));
     let t;
@@ -94,41 +108,42 @@ export class XAgent {
       //   ],
       //   max_results: 10,
       // });
-      this._logger.log(`📦 Received ${response?.length} mentions`);
+      this._logger.log(
+        `📦 Received ${response?.length} mentions ${response[0].created_at}`,
+      );
       this._logger.log(`🧹 Exclude mentions already replyed...`);
-      // load file with tweet ids already replied
-      const repliedTweetsResponse = fs.readFileSync(
-        p.join(this._REPLYED_TWEET_IDS_FILE_PATH),
+      // load file with latest tweet date
+      const latestTweetDate = fs.readFileSync(
+        p.join(this._REPLYED_TWEET_DATE_FILE_PATH),
         'utf-8',
       );
-      // convert csv to Array
-      const repliedTweets = repliedTweetsResponse.split(',');
       // create mentions list
       const mentions = response
-        // exclude already replied tweets
-        .filter((mention: any) => !repliedTweets.includes(mention.id))
+        // exclude mentions older than the latest tweet date
+        .filter(
+          (mention: any) =>
+            Date.parse(mention.created_at) > Date.parse(latestTweetDate),
+        )
         // exclude mention without text.includes(process.env.TWITTER_USERNAME)
         .filter((mention: any) => {
           return mention.text.includes(process.env.TWITTER_USERNAME);
-        });
-      // Ensure that the pending mentions are not included in repliedTweets list
+        })
+        // sort mentions by oldest first
+        .sort(
+          (a: any, b: any) =>
+            Date.parse(a.created_at) - Date.parse(b.created_at),
+        );
+      // Ensure that the pending mentions are not older than last tweet date
       if (pendingMentions.length > 0) {
         for (const mention of pendingMentions) {
-          if (repliedTweets.includes(mention.id)) {
+          if (Date.parse(mention.created_at) < Date.parse(latestTweetDate)) {
             delete this._mentionsToReply[mention.id];
-            // remove from mentions list
-            if (mentions.find((m) => m.id === mention.id)) {
-              mentions.splice(
-                mentions.findIndex((m) => m.id === mention.id),
-                1,
-              );
-            }
           }
         }
       }
       // perform reply to mentions
       if (mentions.length === 0) {
-        this._logger.log('ℹ No mentions found. Check again in 15 minutes');
+        this._logger.log('ℹ️ No mentions found. Check again in 15 minutes');
       } else {
         // loop over mentions
         for (const mention of mentions) {
@@ -137,13 +152,17 @@ export class XAgent {
           this._logger.log(
             `📣 Responding to mention ID ${mention.id}: ${response}`,
           );
-          await rwClient.v2.reply(response, mention.id);
+          const replyDate = new Date().toISOString();
+          const result = await rwClient.v2.reply(response, mention.id);
+          if (result.errors) {
+            this._logger.error(
+              `❌ Error responding to mention ID ${mention.id}: ${result.errors}`,
+            );
+            continue;
+          }
           this._logger.log(`✅ Replied to mention ID ${mention.id}`);
           // save tweet id to file
-          fs.appendFileSync(
-            this._REPLYED_TWEET_IDS_FILE_PATH,
-            `${mention.id},`,
-          );
+          fs.writeFileSync(this._REPLYED_TWEET_DATE_FILE_PATH, replyDate);
           // remove mention from pending list
           delete this._mentionsToReply[mention.id];
           // wait for 5 seconds before next reply
@@ -172,7 +191,10 @@ export class XAgent {
     }
   }
 
-  private async _generateResponse(prompt: string): Promise<string> {
+  private async _generateResponse(
+    prompt: string,
+    role: 'user' | 'system' = 'user',
+  ): Promise<string> {
     const DEFAULT_RESPONSE = `Eh dude, I'm not sure what you mean by that. Tell me more!`;
     try {
       const completion = await this._client.chat.completions.create({
@@ -186,7 +208,7 @@ export class XAgent {
             role: 'system',
             content: xAgentPrompt,
           },
-          { role: 'user', content: prompt },
+          { role: role, content: prompt },
         ],
       });
       return completion.choices[0].message.content || DEFAULT_RESPONSE;
@@ -200,9 +222,96 @@ export class XAgent {
     const now = dayjs();
     const futureTime = dayjs().add(milliseconds, 'millisecond');
     const duration = futureTime.diff(now, 'minute');
+    if (duration > 1440) {
+      return `${futureTime.diff(now, 'day')} days`;
+    }
+    if (duration > 60) {
+      return `${futureTime.diff(now, 'hour')} hours`;
+    }
     if (duration < 1) {
       return `${futureTime.diff(now, 'second')} seconds`;
     }
     return `${duration} minutes`;
+  }
+
+  private async _searchForNewAccountsToConnectWith() {
+    try {
+      const response = await this._xClient.readOnly.v2.search({
+        query: `crypto OR blockchain OR NFT OR DeFi OR Web3 -is:retweet -is:reply has:hashtags`,
+        'user.fields': ['username', 'name', 'description'],
+        max_results: 10,
+      });
+
+      const newAccounts = response.data.data;
+      for (const account of newAccounts) {
+        // Logic to connect with the new account
+        console.log(`Found new account: ${account.author_id}`);
+        // Example: this._connectWithAccount(account);
+      }
+    } catch (error) {
+      console.error('Error searching for new accounts:', error);
+    }
+  }
+
+  private async _sayGM() {
+    const lastGMTwwetDate = fs.readFileSync(
+      p.join(this._LAST_GM_TWEET_DATE_FILE_PATH),
+      'utf-8',
+    );
+    const diffDay = dayjs().diff(dayjs(lastGMTwwetDate), 'day');
+    if (diffDay < 1) {
+      const diffMs = dayjs().diff(dayjs(lastGMTwwetDate), 'milliseconds');
+      this._logger.log(
+        `🌞 Good Morning tweet already sent today! Wait ${this._getTimeRemaining(diffMs)} for next post...`,
+      );
+      // run again in 1 day
+      const t = setTimeout(async () => {
+        clearTimeout(t);
+        await this._sayGM();
+      }, diffMs);
+      return;
+    }
+    try {
+      this._logger.log(`🌞 Saying Good Morning...`);
+      // get random media from `public/images/square` directory
+      const directoryPath = p.join(process.cwd(), 'public', 'images', 'square');
+      this._logger.log(`📂 Reading images from ${directoryPath}...`);
+      const filesCount = fs.readdirSync(directoryPath).length;
+      if (filesCount === 0) {
+        console.error('No images found in the directory');
+        return;
+      }
+      this._logger.log(`🔍  Found ${filesCount} images`);
+      // random number between 0 and filesCount
+      this._logger.log(`🎲 Selecting random image...`);
+      const randomIndex = Math.floor(Math.random() * filesCount);
+      const filePath = fs.readdirSync(directoryPath)[randomIndex];
+      const imagePath = p.join(directoryPath, filePath);
+      this._logger.log(`🖼️ Selected image: ${filePath}`);
+      // upload image
+      this._logger.log(`📤 Uploading image to twitter...`);
+      const mediaId = await this._xClient.v1.uploadMedia(imagePath);
+      // generate response
+      this._logger.log(`🧠 Generating GM tweet...`);
+      const response = await this._generateResponse(
+        `Generate a tweet based on the trend of #GM. You tweet should start with "GM web3 Degen!"; "GM web3 family!"; "GM web3 community!"; "GM web3 friends!"; "GM web3 homies!"; "GM web3 squad!"; "GM web3 gang!"; "GM web3 team!"; "GM web3 crew!"; "GM web3 fam!"; fowllowed by a short funny positive message about the current crypto ia agent trends OR upcoming benefits of be a part of crypto family. The tweet should not include any hashtags, links or mentions and no special caracters like symbols or quotes.`,
+      );
+      // send tweet
+      this._logger.log(`📣 Sending GM tweet...`);
+      const result = await this._xClient.readWrite.v2.tweet(response, {
+        media: {
+          media_ids: [mediaId],
+        },
+      });
+      if (result.errors) {
+        this._logger.error(
+          `❌ Error sending GM tweet: ${JSON.stringify(result.errors)}`,
+        );
+      } else {
+        this._logger.log(`✅ GM tweet sent!`);
+      }
+    } catch (error) {
+      this._logger.error(`❌ Error sending GM tweet: ${error?.message}`);
+    }
   }
 }
