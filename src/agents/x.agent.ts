@@ -65,7 +65,7 @@ export class XAgent {
           ? pendingMentions
           : await this._xClient.readOnly.v2
               .search({
-                query: `${process.env.TWITTER_USERNAME} -is:reply -is:retweet`,
+                query: `${process.env.TWITTER_USERNAME} -is:retweet`,
                 'tweet.fields': [
                   'author_id',
                   'created_at',
