@@ -228,7 +228,7 @@ export class AgentService {
     // const availableAgents = [MarketAgentService];
     availableAgents.forEach(async ({ name, ...args }) => {
       try {
-        const fileName = name.toLowerCase().replace('agent', '.agent.js'); // myagent.agent.ts
+        const fileName = name.toLowerCase().replace('agent', '.agent'); // myagent.agent.ts
         const path = p.join(__dirname, fileName);
         const agent = await import(path).then((module) => module[name]);
         const instance = new agent(this._client, args);
