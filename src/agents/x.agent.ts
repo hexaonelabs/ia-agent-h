@@ -4,8 +4,9 @@ import { TweetV2, TwitterApi, UserV1 } from 'twitter-api-v2';
 import * as dayjs from 'dayjs';
 import * as fs from 'fs';
 import * as p from 'path';
+import { CustomLogger } from 'src/logger.service';
 
-export class XAgentService {
+export class XAgent {
   private readonly _client: OpenAI;
   private readonly _xClient: TwitterApi;
   private readonly _mentionsToReply: Record<string, TweetV2> = {};
@@ -16,26 +17,27 @@ export class XAgentService {
     'public',
     'replied_tweet_ids.csv',
   );
+  private readonly _logger = new CustomLogger(XAgent.name);
 
   constructor(client: OpenAI) {
     this._client = client;
-    console.log(`[XAgent] ${dayjs().format()} 🏗  Building Twitter client...`);
+    this._logger.log(`🏗  Building Twitter client...`);
     this._xClient = new TwitterApi({
       appKey: process.env.TWITTER_APP_KEY,
       appSecret: process.env.TWITTER_APP_SECRET,
       accessToken: process.env.TWITTER_ACCESS_TOKEN,
       accessSecret: process.env.TWITTER_ACCESS_SECRET,
     });
-    console.log(`[XAgent] ${dayjs().format()} ℹ️  Twitter client ready!`);
+    this._logger.log(`ℹ️  Twitter client ready!`);
   }
 
   async start() {
-    console.log(`[XAgent] ${dayjs().format()} 🚀 Starting IA Agent...`);
+    this._logger.log(`🚀 Starting IA Agent...`);
     const rwClient = this._xClient.readWrite;
     await rwClient.appLogin();
     this._currentUser = await rwClient.currentUser();
-    console.log(
-      `[XAgent] ${dayjs().format()} 👤 IA Agent is connected as @${this._currentUser?.screen_name}`,
+    this._logger.log(
+      `👤 IA Agent is connected as @${this._currentUser?.screen_name}`,
     );
     // ensure that the `_REPLYED_TWEET_IDS_FILE_PATH` file exist
     if (!fs.existsSync(this._REPLYED_TWEET_IDS_FILE_PATH)) {
@@ -54,13 +56,13 @@ export class XAgentService {
       const rwClient = this._xClient.readWrite;
       await delay(10000);
 
-      console.log(`[XAgent] ${dayjs().format()} 🔍 Searching for mentions...`);
+      this._logger.log(`🔍 Searching for mentions...`);
       // check if agent have existing pending mentions to reply
       const pendingMentions = Object.values(this._mentionsToReply);
       // get mentions from API if no pending mentions
       const response =
         pendingMentions.length > 0
-          ? Object.values(this._mentionsToReply)
+          ? pendingMentions
           : await this._xClient.readOnly.v2
               .search({
                 query: `${process.env.TWITTER_USERNAME} -is:reply -is:retweet`,
@@ -92,12 +94,8 @@ export class XAgentService {
       //   ],
       //   max_results: 10,
       // });
-      console.log(
-        `[XAgent] ${dayjs().format()} 📦 Received ${response?.length} mentions`,
-      );
-      console.log(
-        `[XAgent] ${dayjs().format()} 🧹 Exclude mentions already replyed...`,
-      );
+      this._logger.log(`📦 Received ${response?.length} mentions`);
+      this._logger.log(`🧹 Exclude mentions already replyed...`);
       // load file with tweet ids already replied
       const repliedTweetsResponse = fs.readFileSync(
         p.join(this._REPLYED_TWEET_IDS_FILE_PATH),
@@ -105,24 +103,42 @@ export class XAgentService {
       );
       // convert csv to Array
       const repliedTweets = repliedTweetsResponse.split(',');
-      // exclude already replied tweets
-      const mentions = response.filter(
-        (mention: any) => !repliedTweets.includes(mention.id),
-      );
-      // loop over mentions
-      for (const mention of mentions) {
-        if (mention.text.includes(process.env.TWITTER_USERNAME)) {
-          console.log(
-            `[XAgent] ${dayjs().format()} 🛎 Found Mention with post ID: ${mention.id}`,
-          );
+      // create mentions list
+      const mentions = response
+        // exclude already replied tweets
+        .filter((mention: any) => !repliedTweets.includes(mention.id))
+        // exclude mention without text.includes(process.env.TWITTER_USERNAME)
+        .filter((mention: any) => {
+          return mention.text.includes(process.env.TWITTER_USERNAME);
+        });
+      // Ensure that the pending mentions are not included in repliedTweets list
+      if (pendingMentions.length > 0) {
+        for (const mention of pendingMentions) {
+          if (repliedTweets.includes(mention.id)) {
+            delete this._mentionsToReply[mention.id];
+            // remove from mentions list
+            if (mentions.find((m) => m.id === mention.id)) {
+              mentions.splice(
+                mentions.findIndex((m) => m.id === mention.id),
+                1,
+              );
+            }
+          }
+        }
+      }
+      // perform reply to mentions
+      if (mentions.length === 0) {
+        this._logger.log('ℹ No mentions found. Check again in 15 minutes');
+      } else {
+        // loop over mentions
+        for (const mention of mentions) {
+          this._logger.log(`🛎 Found Mention with post ID: ${mention.id}`);
           const response = await this._generateResponse(mention.text);
-          console.log(
-            `[XAgent] ${dayjs().format()} 📣 Responding to mention ID ${mention.id}: ${response}`,
+          this._logger.log(
+            `📣 Responding to mention ID ${mention.id}: ${response}`,
           );
           await rwClient.v2.reply(response, mention.id);
-          console.log(
-            `[XAgent] ${dayjs().format()} ✅ Replied to  mention ID ${mention.id}`,
-          );
+          this._logger.log(`✅ Replied to mention ID ${mention.id}`);
           // save tweet id to file
           fs.appendFileSync(
             this._REPLYED_TWEET_IDS_FILE_PATH,
@@ -140,15 +156,14 @@ export class XAgentService {
       }, TIMEOUT);
     } catch (error) {
       clearTimeout(t);
-      console.error(
-        `[XAgent] ${dayjs().format()} ❌ Error responding to mentions:`,
-        error?.data?.detail || error.message,
+      this._logger.error(
+        `❌ Error responding to mentions: ${error?.data?.detail || error.message}`,
       );
       const limit = error?.rateLimit?.reset
         ? error?.rateLimit?.reset * 1000 - Date.now()
         : TIMEOUT;
-      console.log(
-        `[XAgent] ${dayjs().format()} 🕒 Retrying in approximately ${this._getTimeRemaining(limit)}`,
+      this._logger.log(
+        `🕒 Retrying in approximately ${this._getTimeRemaining(limit)}`,
       );
       t = setTimeout(async () => {
         await this._mentionsMonitoring();
@@ -176,10 +191,7 @@ export class XAgentService {
       });
       return completion.choices[0].message.content || DEFAULT_RESPONSE;
     } catch (error) {
-      console.error(
-        `[XAgent] ${dayjs().format()} ❌ Error generating response:`,
-        error.message,
-      );
+      this._logger.error(`❌ Error generating response: ${error.message}`);
       return DEFAULT_RESPONSE;
     }
   }
