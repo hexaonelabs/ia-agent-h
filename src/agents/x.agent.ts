@@ -57,7 +57,7 @@ export class XAgent {
     }
     this._mentionsMonitoring();
     this._sayGM();
-    // this._searchForNewAccountsToConnectWith();
+    this._searchForNewAccountsToConnectWith();
   }
 
   private async _mentionsMonitoring() {
@@ -235,21 +235,45 @@ export class XAgent {
   }
 
   private async _searchForNewAccountsToConnectWith() {
+    const TIMEOUT = 6 * 60 * 1000;
     try {
-      const response = await this._xClient.readOnly.v2.search({
-        query: `crypto OR blockchain OR NFT OR DeFi OR Web3 -is:retweet -is:reply has:hashtags`,
+      const response = await this._xClient.v2.search({
+        query: `crypto OR blockchain OR NFT OR DeFi OR Web3 -is:retweet -is:reply -has:hashtags`,
         'user.fields': ['username', 'name', 'description'],
+        expansions: [
+          'author_id',
+          'in_reply_to_user_id',
+          'referenced_tweets.id',
+        ],
         max_results: 10,
       });
-
-      const newAccounts = response.data.data;
-      for (const account of newAccounts) {
-        // Logic to connect with the new account
-        console.log(`Found new account: ${account.author_id}`);
-        // Example: this._connectWithAccount(account);
+      for (const tweet of response.data.data) {
+        // connect with account
+        this._logger.log(`🔗 Connecting with @${tweet.author_id}`);
+        await this._xClient.v2.follow(
+          this._currentUser.id.toString(),
+          tweet.author_id.toString(),
+        );
       }
+      const t = setTimeout(async () => {
+        clearTimeout(t);
+        await this._searchForNewAccountsToConnectWith();
+      }, TIMEOUT);
     } catch (error) {
-      console.error('Error searching for new accounts:', error);
+      this._logger.error(
+        `❌ Error searching for new accounts: ${error?.data?.detail || error.message}`,
+      );
+      const limit = error?.rateLimit?.reset
+        ? error?.rateLimit?.reset * 1000 - Date.now()
+        : TIMEOUT;
+      this._logger.log(
+        `🕒 Retrying in approximately ${this._getTimeRemaining(limit)}`,
+      );
+      // run again in limit time
+      const t = setTimeout(async () => {
+        clearTimeout(t);
+        await this._sayGM();
+      }, limit);
     }
   }
 
@@ -313,5 +337,13 @@ export class XAgent {
     } catch (error) {
       this._logger.error(`❌ Error sending GM tweet: ${error?.message}`);
     }
+    // run again in 1 day
+    const t = setTimeout(
+      async () => {
+        clearTimeout(t);
+        await this._sayGM();
+      },
+      1000 * 60 * 60 * 24,
+    );
   }
 }
