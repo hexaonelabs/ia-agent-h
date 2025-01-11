@@ -86,6 +86,19 @@
       }
 
       async function sendMessage(message) {
+        if (message === ':test') {
+          const response = await fetch('/api/test', {
+            method: 'GET',
+            headers: {
+              'Content-Type': 'application/json',
+            },
+          });
+          
+          if (!response.ok) throw new Error('Failed to get response');
+          const { data = [] } = await response.json();
+          addMessage(data.join('<br>'), 'assistant');
+          return;
+        }
         if (message === ':logs') {
           const response = await fetch('/api/logs', {
             method: 'GET',

@@ -27,6 +27,14 @@ export class AppController {
     return `${await this._appService.getHello()} My wallet address is ${account.address}`;
   }
 
+  @Get('api/test')
+  async test() {
+    return {
+      data: 'Hello World',
+      success: true,
+    };
+  }
+
   @Post('api/prompt')
   async chat(@Body() body: { threadId?: string; userInput: string }): Promise<{
     data:
@@ -61,6 +69,10 @@ export class AppController {
       const path = p.join(process.cwd(), 'public/logs', 'app.log');
       const logs = fs.readFileSync(path, 'utf8');
       const logsArray = logs.split('\n');
+      // only return the last 100 logs
+      if (logsArray.length > 100) {
+        logsArray.splice(0, logsArray.length - 100);
+      }
       return {
         data: logsArray,
         success: true,

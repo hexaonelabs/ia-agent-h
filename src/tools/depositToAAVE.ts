@@ -1,94 +1,194 @@
-import { Address, parseUnits, TransactionRequest } from 'viem';
-import { createViemPublicClient } from '../viem/createViemPublicClient';
+import { Address } from 'viem';
+import { providers, Wallet } from 'ethers';
 import { ToolConfig } from './index.js';
-import { createViemWalletClient } from '../viem/createViemWalletClient';
 import { Pool } from '@aave/contract-helpers';
 import { AaveV3Sepolia } from '@bgd-labs/aave-address-book';
+import { sepolia } from 'viem/chains';
+import { ConsoleLogger } from '@nestjs/common';
 
 interface DepositAaveArgs {
-  assetAddress: Address;
+  underlyingToken: Address;
   amountToSupply: string;
+  chainId: number;
 }
+
+const createEthersProvider = () => {
+  const provider = new providers.JsonRpcProvider(
+    sepolia.rpcUrls.default.http[0],
+  );
+  return provider;
+};
+const createEtherWalletClient = () => {
+  const mnemonic = process.env.WALLET_MNEMONIC;
+  return Wallet.fromMnemonic(mnemonic);
+};
 
 export const depositAaveTool: ToolConfig<DepositAaveArgs> = {
   definition: {
     type: 'function',
     function: {
-      name: 'deposit_aave',
+      name: 'deposit_to_aave',
       description: 'Deposit tokens into AAVE V3 Pool to generate yield',
       parameters: {
         type: 'object',
         properties: {
-          assetAddress: {
+          underlyingToken: {
             type: 'string',
             pattern: '^0x[a-fA-F0-9]{40}$',
             description: 'The token address to deposit',
           },
           amountToSupply: {
             type: 'string',
-            description: 'The amount of tokens to deposit',
+            description: 'The amount that will be supplied to the pool',
+          },
+          chainId: {
+            type: 'number',
+            description: 'The chain ID of the network',
           },
         },
-        required: ['assetAddress', 'amountToSupply'],
+        required: ['underlyingToken', 'amountToSupply', 'chainId'],
       },
     },
   },
-  handler: async ({ assetAddress, amountToSupply }) => {
-    return await supplyToAave({ assetAddress, amountToSupply });
+  handler: async ({ underlyingToken, amountToSupply, chainId }) => {
+    // if is testnet, use testnet pool
+    if (chainId === sepolia.id) {
+      const response = await supplyToAave({
+        underlyingToken,
+        amountToSupply,
+      });
+      return JSON.stringify(response);
+    } else {
+      const response = await supplyWithPermitToAave({
+        underlyingToken,
+        amountToSupply,
+      });
+      return JSON.stringify(response);
+    }
   },
 };
 
 export async function supplyToAave({
-  assetAddress,
+  underlyingToken,
   amountToSupply,
 }: {
-  assetAddress: string;
+  underlyingToken: string;
   amountToSupply: string;
 }): Promise<string[]> {
-  const { asset, amount } = { asset: assetAddress, amount: amountToSupply };
+  const logger = new ConsoleLogger('supplyToAave');
   try {
     // Create or recover wallet
-    const walletClient = createViemWalletClient();
-    const address = walletClient.account.address;
-
+    const walletClient = createEtherWalletClient();
+    const provider = createEthersProvider();
+    const wallet = walletClient.connect(provider);
+    // TODO: use chainId to set the network
     // Initialize Pool contract
-    const pool = new Pool(walletClient as any, {
+    const pool = new Pool(wallet.provider, {
       POOL: AaveV3Sepolia.POOL,
       WETH_GATEWAY: AaveV3Sepolia.WETH_GATEWAY,
     });
-
-    const amountWei = parseUnits(amount, 18);
-
+    // parse amount to supply
+    // build query params
     const supplyParams = {
-      user: address,
-      reserve: asset,
-      amount: amountWei.toString(),
-      onBehalfOf: address,
+      user: wallet.address,
+      reserve: underlyingToken,
+      amount: amountToSupply,
+      onBehalfOf: wallet.address,
       referralCode: '0',
     };
-
-    const txs = await pool.supply(supplyParams);
+    // connecting to aave
+    logger.log(`Connecting to Aave pool: ${underlyingToken}`);
+    // call supply function
+    const txs = await pool.supply({
+      ...supplyParams,
+    });
     const txHashes = [];
-
+    // send transactions
     for (const tx of txs) {
       const txData = await tx.tx();
-      const txRequest: TransactionRequest = {
+      const txRequest = {
         to: txData.to as `0x${string}`,
         data: txData.data as `0x${string}`,
         value: BigInt(txData.value || 0),
       };
-
-      const hash = await walletClient.sendTransaction(txRequest as any);
-
-      const receipt = await createViemPublicClient().waitForTransactionReceipt({
-        hash,
+      console.log('Sending transaction:', txRequest);
+      const txResponse = await wallet.sendTransaction({
+        ...txRequest,
       });
+      console.log(
+        'Transaction sent wait for receipt. Here is tx hash:',
+        txResponse.hash,
+      );
+      const receipt = await wallet.provider.waitForTransaction(txResponse.hash);
       txHashes.push(receipt.transactionHash);
     }
-
+    // return transactions hash
     return txHashes;
   } catch (error) {
     console.error('Error supplying to Aave:', error);
+    throw error;
+  }
+}
+
+export async function supplyWithPermitToAave({
+  underlyingToken,
+  amountToSupply,
+}: {
+  underlyingToken: string;
+  amountToSupply: string;
+}): Promise<string[]> {
+  const logger = new ConsoleLogger('supplyWithPermitToAave');
+  try {
+    // Create or recover wallet
+    const walletClient = createEtherWalletClient();
+    const provider = createEthersProvider();
+    const wallet = walletClient.connect(provider);
+    // Initialize Pool contract`)
+    const pool = new Pool(wallet.provider, {
+      POOL: AaveV3Sepolia.POOL,
+      WETH_GATEWAY: AaveV3Sepolia.WETH_GATEWAY,
+    });
+    // create timestamp of 10 minutes from now
+    const deadline = `${new Date().setMinutes(new Date().getMinutes() + 10)}`;
+    // sign permit approval
+    logger.log(`💋 Sign permi approval for Aave pool: ${underlyingToken}...`);
+    const dataToSign: string = await pool.signERC20Approval({
+      user: wallet.address,
+      reserve: underlyingToken,
+      amount: amountToSupply,
+      deadline,
+    });
+    logger.log(`💋 Sign tx data... `);
+    const signature = await wallet.signMessage(dataToSign);
+    // supply to pool with permit
+    logger.log(`🚰 Supplying to Aave pool with permit: ${underlyingToken}`);
+    const txs = await pool.supplyWithPermit({
+      user: wallet.address,
+      reserve: underlyingToken,
+      amount: amountToSupply,
+      signature,
+      onBehalfOf: wallet.address,
+      deadline,
+    });
+    const txResponses = [] as providers.TransactionResponse[];
+    for (const tx of txs) {
+      const txData = await tx.tx();
+      const txRequest = {
+        to: txData.to as `0x${string}`,
+        data: txData.data as `0x${string}`,
+        value: BigInt(txData.value || 0),
+      };
+      console.log('🚀 Sending transaction:', txRequest);
+      const txResponse = await wallet.sendTransaction({
+        ...txRequest,
+      });
+      txResponses.push(txResponse);
+    }
+    logger.log(`✅ Transactions sent to Aave pool: ${underlyingToken}`);
+    const txReceipts = await Promise.all(txResponses.map((tx) => tx.wait()));
+    return txReceipts.map((tx) => tx.transactionHash);
+  } catch (error) {
+    logger.error(`❌ Error supplying to Aave with permit: ${error.message}`);
     throw error;
   }
 }
