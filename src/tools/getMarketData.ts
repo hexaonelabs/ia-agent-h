@@ -98,7 +98,7 @@ async function getCoinIdFromTicker(
     );
     return coin ? coin.id : null;
   } catch (error) {
-    console.error('Error fetching coin list:', error);
+    console.error('❌  Error fetching coin list:', error);
     throw new Error('Failed to fetch coin list');
   }
 }
@@ -116,7 +116,7 @@ async function getMarketData(coinId: string): Promise<IMarketData[]> {
     );
     return response.data;
   } catch (error) {
-    console.error('Error fetching market data:', error);
+    console.error('❌  Error fetching market data:', error);
     throw new Error('Failed to fetch market data');
   }
 }

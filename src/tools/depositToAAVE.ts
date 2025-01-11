@@ -96,8 +96,10 @@ export async function supplyToAave({
       onBehalfOf: wallet.address,
       referralCode: '0',
     };
-    // connecting to aave
-    logger.log(`Connecting to Aave pool: ${underlyingToken}`);
+    // supply to aave
+    logger.log(
+      `🚰 Supplying to Aave pool of underlying asset: ${underlyingToken}`,
+    );
     // call supply function
     const txs = await pool.supply({
       ...supplyParams,
@@ -111,21 +113,19 @@ export async function supplyToAave({
         data: txData.data as `0x${string}`,
         value: BigInt(txData.value || 0),
       };
-      console.log('Sending transaction:', txRequest);
+      logger.log(`✉️ Sending transaction: ${txRequest}`);
       const txResponse = await wallet.sendTransaction({
         ...txRequest,
       });
-      console.log(
-        'Transaction sent wait for receipt. Here is tx hash:',
-        txResponse.hash,
-      );
+      logger.log(`⌛ Wait for transaction receipt...`);
       const receipt = await wallet.provider.waitForTransaction(txResponse.hash);
+      logger.log(`✅ Transaction mined: ${receipt.transactionHash}`);
       txHashes.push(receipt.transactionHash);
     }
     // return transactions hash
     return txHashes;
   } catch (error) {
-    console.error('Error supplying to Aave:', error);
+    logger.error('❌ Error supplying to Aave:', error);
     throw error;
   }
 }
@@ -178,7 +178,7 @@ export async function supplyWithPermitToAave({
         data: txData.data as `0x${string}`,
         value: BigInt(txData.value || 0),
       };
-      console.log('🚀 Sending transaction:', txRequest);
+      logger.log(`✉️  Sending transaction: ${JSON.stringify(txRequest)}`);
       const txResponse = await wallet.sendTransaction({
         ...txRequest,
       });

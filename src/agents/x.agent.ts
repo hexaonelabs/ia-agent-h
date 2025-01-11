@@ -302,7 +302,7 @@ export class XAgent {
       this._logger.log(`📂 Reading images from ${directoryPath}...`);
       const filesCount = fs.readdirSync(directoryPath).length;
       if (filesCount === 0) {
-        console.error('No images found in the directory');
+        console.error('❌ No images found in the directory');
         return;
       }
       this._logger.log(`🔍  Found ${filesCount} images`);
@@ -321,7 +321,7 @@ export class XAgent {
         `Generate a tweet based on the trend of #GM. You tweet should start with "GM web3 Degen!"; "GM web3 family!"; "GM web3 community!"; "GM web3 friends!"; "GM web3 homies!"; "GM web3 squad!"; "GM web3 gang!"; "GM web3 team!"; "GM web3 crew!"; "GM web3 fam!"; fowllowed by a short funny positive message about the current crypto ia agent trends OR upcoming benefits of be a part of crypto family. The tweet should not include any hashtags, links or mentions and no special caracters like symbols or quotes.`,
       );
       // send tweet
-      this._logger.log(`📣 Sending GM tweet...`);
+      this._logger.log(`✉️  Sending GM tweet...`);
       const result = await this._xClient.readWrite.v2.tweet(response, {
         media: {
           media_ids: [mediaId],

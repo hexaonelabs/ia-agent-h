@@ -153,7 +153,7 @@ export class AgentService {
     const assistantMessage = messages.data.find(
       (message) => message.role === 'assistant',
     );
-    this._logger.log(`🚀 Assistant message:`, assistantMessage?.content[0]);
+    this._logger.log(`🚀 Assistant message: ${assistantMessage?.content[0]}`);
     // return response or default message
     return (
       assistantMessage?.content[0] || {
@@ -168,10 +168,12 @@ export class AgentService {
 
     const toolCalls = run.required_action?.submit_tool_outputs?.tool_calls;
     if (!toolCalls) {
-      this._logger.log('ℹ No tool calls found');
+      this._logger.log('ℹ️ No tool calls found');
       return run;
     }
-    this._logger.log(`🔧 Found ${toolCalls.length} tool calls:`, toolCalls);
+    this._logger.log(
+      `🔧 Found ${toolCalls.length} tool calls: ${JSON.stringify(toolCalls)}`,
+    );
     const toolOutputs = await Promise.all(
       toolCalls.map(async (tool) => {
         const ToolConfig = tools[tool.function.name];
@@ -185,7 +187,9 @@ export class AgentService {
         try {
           const args = JSON.parse(tool.function.arguments);
           const output = await ToolConfig.handler(args);
-          this._logger.log(`🔧 Tool ${tool.function.name} output:`, output);
+          this._logger.log(
+            `🔧 Tool ${tool.function.name} output: ${JSON.stringify({ output })}`,
+          );
           return {
             tool_call_id: tool.id,
             output: String(output),
@@ -194,8 +198,7 @@ export class AgentService {
           const errorMessage =
             error instanceof Error ? error.message : String(error);
           this._logger.log(
-            `❌ Tool ${tool.function.name} error:`,
-            errorMessage,
+            `❌ Tool ${tool.function.name} error: ${errorMessage}`,
           );
           return {
             tool_call_id: tool.id,

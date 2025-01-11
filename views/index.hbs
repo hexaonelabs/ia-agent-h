@@ -127,7 +127,7 @@
           currentThreadId = data?.threadId;
           addMessage(data?.message, 'assistant');
         } catch (error) {
-          console.error('Error:', error);
+          console.error('❌  Error:', error);
           addMessage('Sorry, I encountered an error processing your request.', 'assistant');
         }
       }
