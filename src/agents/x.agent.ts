@@ -178,7 +178,7 @@ export class XAgent {
         ? error?.rateLimit?.reset * 1000 - Date.now()
         : TIMEOUT;
       this._logger.log(
-        `🕒 Retrying in approximately ${this._getTimeRemaining(limit)}`,
+        `🕒 Retrying searching for mentions in approximately ${this._getTimeRemaining(limit)}`,
       );
       t = setTimeout(async () => {
         await this._mentionsMonitoring();
@@ -267,12 +267,12 @@ export class XAgent {
         ? error?.rateLimit?.reset * 1000 - Date.now()
         : TIMEOUT;
       this._logger.log(
-        `🕒 Retrying in approximately ${this._getTimeRemaining(limit)}`,
+        `🕒 Retrying searching for new accounts in approximately ${this._getTimeRemaining(limit)}`,
       );
       // run again in limit time
       const t = setTimeout(async () => {
         clearTimeout(t);
-        await this._sayGM();
+        await this._searchForNewAccountsToConnectWith();
       }, limit);
     }
   }
