@@ -24,6 +24,13 @@ export class XAgent {
     'logs',
     'last_gm_tweet_date.log',
   );
+  private readonly _IMGS_DIRECTORY_PATH = p.join(
+    process.cwd(),
+    'public',
+    'images',
+    'h-medias',
+    'square',
+  );
 
   private readonly _logger = new CustomLogger(XAgent.name);
 
@@ -298,7 +305,7 @@ export class XAgent {
     try {
       this._logger.log(`🌞 Saying Good Morning...`);
       // get random media from `public/images/square` directory
-      const directoryPath = p.join(process.cwd(), 'public', 'images', 'square');
+      const directoryPath = this._IMGS_DIRECTORY_PATH;
       this._logger.log(`📂 Reading images from ${directoryPath}...`);
       const filesCount = fs.readdirSync(directoryPath).length;
       if (filesCount === 0) {

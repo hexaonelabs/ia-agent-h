@@ -43,9 +43,7 @@ replied_tweet_ids.csv
 .env.production.local
 .env.local
 agents.config.yml
-public/images/square
-public/images/landscape
-public/images/portrait
+public/images/h-medias/*
 
 # temp directory
 .temp
