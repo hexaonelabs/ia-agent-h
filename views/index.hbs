@@ -118,13 +118,13 @@
             headers: {
               'Content-Type': 'application/json',
             },
-            body: JSON.stringify({ userInput: message }),
+            body: JSON.stringify({ userInput: message, threadId: currentThreadId }),
           });
           
           if (!response.ok) throw new Error('Failed to get response');
           
           const { data = {} } = await response.json();
-          currentThreadId = data?.threadId;
+          currentThreadId = data?.threadId || undefined;
           addMessage(data?.message, 'assistant');
         } catch (error) {
           console.error('❌  Error:', error);
