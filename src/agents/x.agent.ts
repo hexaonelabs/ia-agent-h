@@ -333,8 +333,14 @@ export class XAgent {
         },
       });
       // save tweet date to file
-      const tweetDate = new Date().toISOString();
-      fs.writeFileSync(this._LAST_GM_TWEET_DATE_FILE_PATH, tweetDate);
+      try {
+        const tweetDate = new Date().toISOString();
+        fs.writeFileSync(this._LAST_GM_TWEET_DATE_FILE_PATH, tweetDate);
+      } catch (error) {
+        this._logger.error(
+          `❌ Error writing last GM tweet date to file: ${error.message}`,
+        );
+      }
       if (result.errors) {
         this._logger.error(
           `❌ Error sending GM tweet: ${JSON.stringify(result.errors)}`,
