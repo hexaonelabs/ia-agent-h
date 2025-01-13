@@ -33,4 +33,4 @@ npm run start:dev
 Once the agent is running, open you browser to `localhost:3000` and you should see the Agent H interface.
 
 ### Edit the character file
-1. open `src/const/prompt.ts`
+1. open `characters/agent-h.yml` file and edit the character name, description and other details.
