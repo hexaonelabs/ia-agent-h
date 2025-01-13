@@ -4,9 +4,16 @@ import { AppService } from './app.service';
 import { AgentService } from '../agents/agent.service';
 import { ConfigModule } from '@nestjs/config';
 import { CustomLogger } from 'src/logger.service';
+import { JwtModule } from '@nestjs/jwt';
 
 @Module({
-  imports: [ConfigModule.forRoot()],
+  imports: [
+    ConfigModule.forRoot(),
+    JwtModule.register({
+      secret: process.env.JWT_SECRET,
+      signOptions: { expiresIn: '1h' },
+    }),
+  ],
   controllers: [AppController],
   providers: [AppService, AgentService, CustomLogger],
 })

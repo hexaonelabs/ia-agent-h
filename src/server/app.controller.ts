@@ -1,9 +1,10 @@
-import { Body, Controller, Get, Post, Render } from '@nestjs/common';
+import { Body, Controller, Get, Post, Render, UseGuards } from '@nestjs/common';
 import { AppService } from './app.service';
 import { AgentService } from '../agents/agent.service';
 import { createViemWalletClient } from 'src/viem/createViemWalletClient';
 import * as fs from 'fs';
 import * as p from 'path';
+import { EvmAuthGuard } from './evm-auth.guard';
 
 @Controller()
 export class AppController {
@@ -21,6 +22,7 @@ export class AppController {
     };
   }
 
+  @UseGuards(EvmAuthGuard)
   @Get('api')
   async getHello() {
     const { account } = createViemWalletClient();
@@ -35,6 +37,18 @@ export class AppController {
     };
   }
 
+  @Post('/api/auth/evm-signin')
+  async evmSignIn(
+    @Body() body: { address: string; signature: string; message: string },
+  ) {
+    return this._appService.evmSignIn(
+      body.address,
+      body.signature,
+      body.message,
+    );
+  }
+
+  @UseGuards(EvmAuthGuard)
   @Post('api/prompt')
   async chat(@Body() body: { threadId?: string; userInput: string }): Promise<{
     data:
@@ -62,6 +76,7 @@ export class AppController {
     return response;
   }
 
+  @UseGuards(EvmAuthGuard)
   @Get('api/logs')
   async getLogs() {
     try {
