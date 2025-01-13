@@ -11,7 +11,6 @@ export class XAgent {
   private readonly _xClient: TwitterApi;
   private readonly _mentionsToReply: Record<string, TweetV2> = {};
   private _currentUser: UserV1 | undefined = undefined;
-  // file located to root `public` directory
   private readonly _REPLYED_TWEET_DATE_FILE_PATH = p.join(
     process.cwd(),
     'public',
@@ -105,16 +104,6 @@ export class XAgent {
                 }
                 return Object.values(this._mentionsToReply);
               });
-      // const response = await rwClient.v2.search({
-      //   query: `${process.env.TWITTER_USERNAME} -is:reply -is:retweet`,
-      //   'tweet.fields': ['author_id', 'created_at', 'referenced_tweets'],
-      //   expansions: [
-      //     'author_id',
-      //     'in_reply_to_user_id',
-      //     'referenced_tweets.id',
-      //   ],
-      //   max_results: 10,
-      // });
       this._logger.log(
         `📦 Received ${response?.length} mentions ${response[0].created_at}`,
       );
@@ -202,6 +191,10 @@ export class XAgent {
     prompt: string,
     role: 'user' | 'system' = 'user',
   ): Promise<string> {
+    // disable logging on development mode
+    if (process.env.NODE_ENV !== 'production') {
+      return;
+    }
     const DEFAULT_RESPONSE = `Eh dude, I'm not sure what you mean by that. Tell me more!`;
     try {
       const completion = await this._client.chat.completions.create({
@@ -285,24 +278,29 @@ export class XAgent {
   }
 
   private async _sayGM() {
-    const lastGMTwwetDate = fs.readFileSync(
-      p.join(this._LAST_GM_TWEET_DATE_FILE_PATH),
-      'utf-8',
-    );
+    this._logger.log(`🔍 Searching for last GM tweet date...`);
+    const lastGMTwwetDate = fs
+      .readFileSync(p.join(this._LAST_GM_TWEET_DATE_FILE_PATH), 'utf-8')
+      .trim();
+    this._logger.log(`📅 Last GM tweet date: ${lastGMTwwetDate}`);
     const diffDay = dayjs().diff(dayjs(lastGMTwwetDate), 'day');
     if (diffDay < 1) {
-      const diffMs = dayjs().diff(dayjs(lastGMTwwetDate), 'milliseconds');
+      const msUntilNexDay = dayjs(lastGMTwwetDate).add(1, 'day').diff(dayjs());
       this._logger.log(
-        `🌞 Good Morning tweet already sent today! Wait ${this._getTimeRemaining(diffMs)} for next post...`,
+        `🌞 Good Morning tweet already sent today! Wait ${this._getTimeRemaining(msUntilNexDay)} for next post...`,
       );
       // run again in 1 day
       const t = setTimeout(async () => {
         clearTimeout(t);
         await this._sayGM();
-      }, diffMs);
+      }, msUntilNexDay);
       return;
     }
     try {
+      // disable logging on development mode
+      if (process.env.NODE_ENV !== 'production') {
+        return;
+      }
       this._logger.log(`🌞 Saying Good Morning...`);
       // get random media from `public/images/square` directory
       const directoryPath = this._IMGS_DIRECTORY_PATH;
@@ -334,6 +332,9 @@ export class XAgent {
           media_ids: [mediaId],
         },
       });
+      // save tweet date to file
+      const tweetDate = new Date().toISOString();
+      fs.writeFileSync(this._LAST_GM_TWEET_DATE_FILE_PATH, tweetDate);
       if (result.errors) {
         this._logger.error(
           `❌ Error sending GM tweet: ${JSON.stringify(result.errors)}`,
