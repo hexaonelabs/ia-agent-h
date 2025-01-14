@@ -1,5 +1,4 @@
 import OpenAI from 'openai';
-import { xAgentPrompt } from '../const/prompt';
 import { TweetV2, TwitterApi, UserV1 } from 'twitter-api-v2';
 import * as dayjs from 'dayjs';
 import * as fs from 'fs';
@@ -199,6 +198,7 @@ export class XAgent {
     const DEFAULT_RESPONSE = `Eh dude, I'm not sure what you mean by that. Tell me more!`;
     try {
       const assistantPrompt = await getAssistantPrompt();
+      const xAgentPrompt = await getAssistantPrompt('x.yml');
       const completion = await this._client.chat.completions.create({
         model: 'gpt-3.5-turbo',
         store: false,

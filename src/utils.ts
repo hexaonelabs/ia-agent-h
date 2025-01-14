@@ -111,7 +111,7 @@ export const getAssistantConfig = (
  */
 export const getAssistantToolsFunction = async (assistantFileName: string) => {
   const { Tools } = getAssistantConfig(assistantFileName);
-  const toolsNames = Tools?.map(({ Name }) => Name);
+  const toolsNames = Tools?.map(({ Name }) => Name) || [];
   const tools: ToolConfig<any>[] = [];
   await Promise.all(
     toolsNames.map(async (name) => {
@@ -221,15 +221,17 @@ export const getAssistantPrompt = async (fileName: string = 'agent-h.yml') => {
     getAssistantConfig(fileName);
 
   // get all tools names, group by type & normalize to camel case
-  const readToolsNames = Tools?.filter(({ type }) => type === 'read')
-    ?.map(({ Name }) => Name)
-    .filter(Boolean);
+  const readToolsNames =
+    Tools?.filter(({ type }) => type === 'read')
+      ?.map(({ Name }) => Name)
+      .filter(Boolean) || [];
   const readToolsFilesPath = readToolsNames.map(
     (name) => `${toCamelCase(name)}.yml`,
   );
-  const writeToolsNames = Tools?.filter(({ type }) => type === 'write')
-    ?.map(({ Name }) => Name)
-    .filter(Boolean);
+  const writeToolsNames =
+    Tools?.filter(({ type }) => type === 'write')
+      ?.map(({ Name }) => Name)
+      .filter(Boolean) || [];
   const writeToolsFilesPath = writeToolsNames.map(
     (name) => `${toCamelCase(name)}.yml`,
   );
