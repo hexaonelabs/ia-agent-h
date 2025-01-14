@@ -1,6 +1,6 @@
 # Agent H 🤖 
 
-NodeJS Autonomous Agent Manager with direct blockchain interactions and an multiples AI assistant. Inspired by the [EizaOS](https://github.com/elizaOS/eliza) project this agent framework is based on NodeJS and is designed to be modular, extensible and  more easily to use than EizaOS.
+NodeJS Autonomous Agent Manager with direct blockchain interactions and an multiples AI assistant. Inspired by the [EizaOS](https://github.com/elizaOS/eliza) project this agent framework is based on NodeJS and is designed to be modular, extensible and  more easily to use and scale.
 
 <div align="center">
   <img src="./public/images/agent-h-33.jpeg" alt="Agent H Banner" width="100%" />
