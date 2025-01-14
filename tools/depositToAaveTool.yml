@@ -1,6 +1,6 @@
 Name: deposit_to_aave
 Description: Deposit tokens into AAVE V3 Pool to generate yield
-Handler: src/tools/depositToAAVE
+Handler: tools/depositToAAVE
 Args: 
   - Name: underlyingToken
     Description: The token address to deposit

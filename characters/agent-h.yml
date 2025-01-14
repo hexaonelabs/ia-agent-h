@@ -66,3 +66,5 @@ Instructions: |
 Tools: 
   - Name: get_balance
     type: read
+  - Name: deposit_to_aave
+    type: write
