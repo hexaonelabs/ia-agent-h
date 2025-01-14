@@ -209,3 +209,61 @@ export const yamlToToolParser = async (
     handler: functionHandler,
   };
 };
+
+/**
+ * Function that returns the assistant prompt string text from the assistant file name
+ * @param fileName
+ * @returns
+ */
+export const getAssistantPrompt = async (fileName: string = 'agent-h.yml') => {
+  // load file content from `characters/name.yml` file
+  const { Name, Description, Instructions, Tools } =
+    getAssistantConfig(fileName);
+
+  // get all tools names, group by type & normalize to camel case
+  const readToolsNames = Tools?.filter(({ type }) => type === 'read')
+    ?.map(({ Name }) => Name)
+    .filter(Boolean);
+  const readToolsFilesPath = readToolsNames.map(
+    (name) => `${toCamelCase(name)}.yml`,
+  );
+  const writeToolsNames = Tools?.filter(({ type }) => type === 'write')
+    ?.map(({ Name }) => Name)
+    .filter(Boolean);
+  const writeToolsFilesPath = writeToolsNames.map(
+    (name) => `${toCamelCase(name)}.yml`,
+  );
+  // load all tools from yaml files
+  const readTools = [];
+  await Promise.all(
+    readToolsFilesPath.map(async (filePath) => {
+      const { definition: tool } = await yamlToToolParser(filePath);
+      readTools.push(tool);
+    }),
+  );
+  const writeTools = [];
+  await Promise.all(
+    writeToolsFilesPath.map(async (filePath) => {
+      const { definition: tool } = await yamlToToolParser(filePath);
+      writeTools.push(tool);
+    }),
+  );
+  // build prompt string text
+  const assistantPrompt = `# ${Name}
+${Description}
+
+Your wallet is your identity, you are the owner of your data and none can access it.
+You can share your public wallet address with anyone to prove your identity or to receive funds.
+
+${[...readTools, ...writeTools].length > 0 ? 'To acompish this mission you have access & you can perform allo these tools to execute multiples operations:' : ''}  
+${readTools.length > 0 ? '## 1 READ OPERATIONS:' : ''}
+${readTools.length > 0 ? readTools.map((tool) => `- "${tool.function.name}": ${tool.function.description}`).join('\n') : ''}
+
+${writeTools.length > 0 ? '## 2 WRITE OPERATIONS:' : ''}
+${writeTools.length > 0 ? writeTools.map((tool) => `- "${tool.function.name}": ${tool.function.description}`).join('\n') : ''}
+
+${Instructions ? '# INSTRUCTIONS:' : ''}
+${Instructions ? Instructions : ''}`;
+  // return prompt string text
+  return assistantPrompt;
+};

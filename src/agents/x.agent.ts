@@ -1,10 +1,11 @@
 import OpenAI from 'openai';
-import { getAssistantPrompt, xAgentPrompt } from '../const/prompt';
+import { xAgentPrompt } from '../const/prompt';
 import { TweetV2, TwitterApi, UserV1 } from 'twitter-api-v2';
 import * as dayjs from 'dayjs';
 import * as fs from 'fs';
 import * as p from 'path';
-import { CustomLogger } from 'src/logger.service';
+import { CustomLogger } from '../logger.service';
+import { getAssistantPrompt } from '../utils';
 
 export class XAgent {
   private readonly _client: OpenAI;

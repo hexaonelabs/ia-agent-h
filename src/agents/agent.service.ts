@@ -3,16 +3,14 @@ import OpenAI from 'openai';
 import { Thread } from 'openai/resources/beta/threads/threads';
 import { Assistant } from 'openai/resources/beta/assistants';
 import { Run } from 'openai/resources/beta/threads/runs/runs';
-
 import { parse } from 'marked';
-// import { tools } from '../tools/index';
-import { getAssistantPrompt } from '../const/prompt';
 import {
   getAssistantConfig,
   getAssistantCtrl,
   getAssistantsFileName,
   getAssistantToolsFunction,
   ToolConfig,
+  getAssistantPrompt,
 } from '../utils';
 import { CustomLogger } from '../logger.service';
 
