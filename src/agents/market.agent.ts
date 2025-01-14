@@ -1,14 +1,8 @@
-import OpenAI from 'openai';
 import { getMarketData, IMarketData } from '../tools/getMarketData';
 import { CustomLogger } from 'src/logger.service';
 
 export class MarketAgent {
-  private readonly _client: OpenAI;
   private readonly _logger = new CustomLogger(MarketAgent.name);
-
-  constructor(client: OpenAI) {
-    this._client = client;
-  }
 
   async start() {
     await new Promise((resolve) => setTimeout(resolve, 1000));

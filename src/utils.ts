@@ -2,7 +2,6 @@ import * as fs from 'fs';
 import * as yaml from 'js-yaml';
 import * as p from 'path';
 import { ToolConfig, yamlToToolParser } from './tools';
-import { CustomLogger } from './logger.service';
 
 export const upsertAgent = (
   filePath: string,
@@ -109,6 +108,25 @@ export const getAssistantToolsFunction = async (assistantFileName: string) => {
   return tools;
 };
 
-export const getAssistantCtrl = async (assistantFileName: string) => ({
-  start: async () => new CustomLogger(assistantFileName).log('Started!'),
-});
+export const getAssistantCtrl = async (
+  assistantFileName: string,
+): Promise<{
+  start: () => Promise<void>;
+} | null> => {
+  const { Ctrl } = getAssistantConfig(assistantFileName);
+  if (!Ctrl) {
+    return null;
+  }
+  const modulePath = `./${Ctrl}`;
+  const moduleName = `${Ctrl.split('/').pop().toUpperCase()[0]}${toCamelCase(Ctrl.split('/').pop().split('.')[0].slice(1))}Agent`;
+  const ctrl = await import(modulePath).then((module) => {
+    return module?.[moduleName];
+  });
+  if (!ctrl) {
+    throw new Error(
+      `❌ Ctrl module ${moduleName} not found at path ${modulePath}`,
+    );
+  }
+  const i = new ctrl() as { start: () => Promise<void> };
+  return i;
+};

@@ -250,7 +250,7 @@ export class AgentService {
   }
 
   private async _manageAgents() {
-    await new Promise((resolve) => setTimeout(resolve, 5000)); // Wait 5 seconds
+    await new Promise((resolve) => setTimeout(resolve, 2500)); // Wait 2.5 seconds
     // load all files characters in the agents folder to get all files name
     this._logger.log(`🤖 Loding assistant from 'charateres/{FILE_NAME}.yml`);
     const agentsFileName = getAssistantsFileName();
@@ -267,7 +267,9 @@ export class AgentService {
         const tools = await getAssistantToolsFunction(fileName);
         const agent = { assistant, ctrl, tools };
         // start agent befor store it
-        await ctrl?.start(); // start the agent controller
+        if (ctrl) {
+          await ctrl?.start(); // start the agent controller
+        }
         this._managedAgents[fileName] = agent;
         this._logger.log(`🤖 Assistant ${fileName} started`);
       } catch (error) {
