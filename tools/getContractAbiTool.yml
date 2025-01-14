@@ -1,0 +1,14 @@
+Name: get_contract_abi
+Description: Get the ABI or specific function signature of a deployed contract
+Handler: tools/getContractAbi
+Args:
+  - Name: contract
+    Description: The contract address to get the ABI from
+    Required: true
+    Type: string
+    Pattern: ^0x[a-fA-F0-9]{40}$
+
+  - Name: functionName
+    Description: Get signature for a specific function name
+    Required: false
+    Type: string

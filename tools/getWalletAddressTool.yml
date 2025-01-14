@@ -1,0 +1,4 @@
+Name: get_wallet_address
+Description: Get your connected public wallet address
+Args: 
+Handler: tools/getWalletAddress

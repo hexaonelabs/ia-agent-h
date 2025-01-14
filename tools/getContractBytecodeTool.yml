@@ -1,0 +1,9 @@
+Name: get_contract_bytecode
+Description: Get the bytecode of a deployed contract
+Handler: tools/getContractBytecode
+Args: 
+  - Name: contract
+    Description: The contract address to get the bytecode from
+    Required: true
+    Type: string
+    Pattern: ^0x[a-fA-F0-9]{40}$

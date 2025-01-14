@@ -1,0 +1,28 @@
+Name: read_contract
+Description: Read data from a deployed smart contract
+Handler: tools/readContract
+Args: 
+  - Name: contract
+    Description: The contract address to read data from
+    Required: true
+    Type: string
+    Pattern: ^0x[a-fA-F0-9]{40}$
+
+  - Name: functionName
+    Description: The function name to call on the contract
+    Required: true
+    Type: string
+
+  - Name: args
+    Description: The optionnal arguments to pass to the contract function call
+    Required: false
+    Type: array
+    Items:
+      Type: string
+  
+  - Name: abi
+    Description: The ABI of the contract
+    Required: true
+    Type: array
+    Items:
+      Type: object 

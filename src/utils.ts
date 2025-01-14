@@ -1,7 +1,41 @@
 import * as fs from 'fs';
 import * as yaml from 'js-yaml';
 import * as p from 'path';
-import { ToolConfig, yamlToToolParser } from './tools';
+
+export interface ToolConfig<T = any> {
+  definition: {
+    type: 'function';
+    function: {
+      strict?: boolean;
+      name: string;
+      description: string;
+      parameters: {
+        type: 'object';
+        properties: Record<string, any>;
+        required: string[];
+        additionalProperties?: boolean;
+      };
+    };
+  };
+  handler: (args: T) => Promise<any>;
+}
+
+interface Arg {
+  Name: string;
+  Description: string;
+  Required: boolean;
+  Type: string;
+  Pattern: string;
+  Default?: string;
+  Items?: any;
+}
+
+interface YamlData {
+  Name: string;
+  Description: string;
+  Handler: string;
+  Args: Arg[];
+}
 
 // replace `_` & `-` by convert to camel case
 export const toCamelCase = (value: string) => {
@@ -16,16 +50,33 @@ export const toCamelCase = (value: string) => {
 export const getAssistantsFileName = () => {
   const filePath = p.join(process.cwd(), 'characters');
   const files = fs.readdirSync(filePath);
-  return files
+  const filesName = files
     .filter((file) => file.includes('.yml'))
     .filter((file) => !file.includes('agent-h'))
     .map((file) => file.split('.yml')[0]);
+  // chek if files content contain `Enabled: false` config
+  // and remove it from the list
+  const enabledFilesName = filesName.filter((file) => {
+    const fileContent = fs.readFileSync(
+      p.join(filePath, `${file}.yml`),
+      'utf-8',
+    );
+    const { Enabled } = yaml.load(fileContent);
+    return Enabled;
+  });
+  return enabledFilesName;
 };
 
+/**
+ * Function that returns the assistant config object from the assistant file name
+ * @param assistantFileName
+ * @returns
+ */
 export const getAssistantConfig = (
   assistantFileName: string,
 ): {
   Name: string;
+  Enabled: boolean;
   Description: string;
   Instructions: string;
   Tools: {
@@ -44,24 +95,22 @@ export const getAssistantConfig = (
   const fileContent = fs.readFileSync(filePath, 'utf-8');
   const {
     Name,
+    Enabled,
     Description,
     Instructions,
     Tools,
     Ctrl = undefined,
   } = yaml.load(fileContent);
-  return { Name, Description, Instructions, Tools, Ctrl };
+  return { Name, Enabled, Description, Instructions, Tools, Ctrl };
 };
 
+/**
+ * Function that returns the assistant tools function from the assistant file name
+ * @param assistantFileName
+ * @returns
+ */
 export const getAssistantToolsFunction = async (assistantFileName: string) => {
-  const filePath = p.join(
-    process.cwd(),
-    'characters',
-    !assistantFileName.includes('.yml')
-      ? `${assistantFileName}.yml`
-      : assistantFileName,
-  );
-  const fileContent = fs.readFileSync(filePath, 'utf-8');
-  const { Tools } = yaml.load(fileContent);
+  const { Tools } = getAssistantConfig(assistantFileName);
   const toolsNames = Tools?.map(({ Name }) => Name);
   const tools: ToolConfig<any>[] = [];
   await Promise.all(
@@ -73,6 +122,11 @@ export const getAssistantToolsFunction = async (assistantFileName: string) => {
   return tools;
 };
 
+/**
+ * Function that returns the assistant ctrl function from the assistant file name
+ * @param assistantFileName
+ * @returns
+ */
 export const getAssistantCtrl = async (
   assistantFileName: string,
 ): Promise<{
@@ -94,4 +148,64 @@ export const getAssistantCtrl = async (
   }
   const i = new ctrl() as { start: () => Promise<void> };
   return i;
+};
+
+/**
+ * Function that returns the tool config object from the assistant file name
+ * @param fileName
+ * @returns
+ */
+export const yamlToToolParser = async (
+  fileName: string,
+): Promise<ToolConfig<any>> => {
+  const normalizedName = fileName.includes('Tool')
+    ? fileName
+    : `${fileName.split('.yml')[0]}Tool`;
+  const filePath = p.join(
+    process.cwd(),
+    'tools',
+    normalizedName.endsWith('.yml') ? normalizedName : `${normalizedName}.yml`,
+  );
+  const fileContents = fs.readFileSync(filePath, 'utf8');
+  const data: YamlData = yaml.load(fileContents) as YamlData;
+  const importPath = `./tools/${data.Handler.includes('/') ? data.Handler.split('/').pop() : data.Handler}`;
+
+  // load handler function from file
+  const functionHandler = await import(importPath).then((module) => {
+    return module[data.Handler.split('/').pop()];
+  });
+  // build definition object
+  const functionDefinition = {
+    type: 'function' as const,
+    function: {
+      name: data.Name,
+      description: data.Description,
+      parameters: {
+        type: 'object' as const,
+        properties: {} as Record<string, any>,
+        required: [],
+      },
+    },
+  } as Pick<ToolConfig['definition'], 'function' | 'type'>;
+  // add args as params
+  data?.Args?.forEach(({ Name, Required, Items, ...arg }) => {
+    functionDefinition.function.parameters.properties[Name] = {
+      // convert key to lowercase
+      ...Object.keys(arg).reduce((acc, key) => {
+        acc[key.toLowerCase()] = arg[key];
+        return acc;
+      }, {}),
+    };
+    if (Required) {
+      functionDefinition.function.parameters.required.push(Name);
+    }
+    if (Items && functionDefinition.function.parameters.properties[Name]) {
+      functionDefinition.function.parameters.properties[Name].items = Items;
+    }
+  });
+  // return tool config object with definition & handler
+  return {
+    definition: functionDefinition,
+    handler: functionHandler,
+  };
 };

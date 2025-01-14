@@ -1,0 +1,13 @@
+Name: write_code_to_file
+Description: Write provided code to a specified file path
+Handler: tools/writeCodeToFile
+Args: 
+  - Name: filepath
+    Description: The file path where the code should be written
+    Required: true
+    Type: string
+
+  - Name: code
+    Description: The code content to write to the file
+    Required: true
+    Type: string

@@ -1,5 +1,4 @@
 import { Address } from 'viem';
-import { ToolConfig } from './index.js';
 import fetch from 'node-fetch';
 
 interface GetContractAbiArgs {
@@ -7,36 +6,10 @@ interface GetContractAbiArgs {
   functionName?: string;
 }
 
-export const getContractAbiTool: ToolConfig<GetContractAbiArgs> = {
-  definition: {
-    type: 'function',
-    function: {
-      name: 'get_contract_abi',
-      description:
-        'Get the ABI or specific function signature of a deployed contract',
-      parameters: {
-        type: 'object',
-        properties: {
-          contract: {
-            type: 'string',
-            pattern: '^0x[a-fA-F0-9]{40}$',
-            description: 'The contract address to get the ABI from',
-          },
-          functionName: {
-            type: 'string',
-            description: 'Optional: Get signature for a specific function name',
-          },
-        },
-        required: ['contract'],
-      },
-    },
-  },
-  handler: async ({ contract, functionName }) => {
-    return await getContractAbi(contract, functionName);
-  },
-};
-
-async function getContractAbi(contract: Address, functionName?: string) {
+export async function getContractAbi({
+  contract,
+  functionName,
+}: GetContractAbiArgs) {
   const BLOCK_EXPLORER_API = 'https://block-explorer-api.testnet.abs.xyz';
   const url = `${BLOCK_EXPLORER_API}/api?module=contract&action=getabi&address=${contract}`;
 

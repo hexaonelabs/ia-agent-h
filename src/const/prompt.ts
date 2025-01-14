@@ -1,5 +1,4 @@
-import { yamlToToolParser } from '../tools';
-import { getAssistantConfig, toCamelCase } from 'src/utils';
+import { getAssistantConfig, toCamelCase, yamlToToolParser } from '../utils';
 
 export const getAssistantPrompt = async (fileName: string = 'agent-h.yml') => {
   // load file content from `characters/name.yml` file
@@ -37,6 +36,9 @@ export const getAssistantPrompt = async (fileName: string = 'agent-h.yml') => {
   // build prompt string text
   const assistantPrompt = `# ${Name}
 ${Description}
+
+Your wallet is your identity, you are the owner of your data and none can access it.
+You can share your public wallet address with anyone to prove your identity or to receive funds.
 
 ${[...readTools, ...writeTools].length > 0 ? 'To acompish this mission you have access & you can perform allo these tools to execute multiples operations:' : ''}  
 ${readTools.length > 0 ? '## 1 READ OPERATIONS:' : ''}

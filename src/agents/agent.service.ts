@@ -12,9 +12,9 @@ import {
   getAssistantCtrl,
   getAssistantsFileName,
   getAssistantToolsFunction,
+  ToolConfig,
 } from '../utils';
 import { CustomLogger } from '../logger.service';
-import { ToolConfig } from 'src/tools';
 
 @Injectable()
 export class AgentService {

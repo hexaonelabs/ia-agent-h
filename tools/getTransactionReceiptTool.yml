@@ -1,0 +1,9 @@
+Name: get_transaction_receipt
+Description: Get the receipt of a transaction to check its status and details
+Handler: tools/getTransactionReceipt
+Args: 
+  - Name: hash
+    Description: The transaction hash to get the receipt for
+    Required: true
+    Type: string
+    Pattern: ^0x[a-fA-F0-9]{64}$
