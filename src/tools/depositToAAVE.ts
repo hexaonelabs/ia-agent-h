@@ -29,17 +29,15 @@ export const depositToAAVE = async ({
 }: DepositAaveArgs) => {
   // if is testnet, use testnet pool
   if (chainId === sepolia.id) {
-    const response = await supply({
+    return supply({
       underlyingToken,
       amountToSupply,
     });
-    return response;
   } else {
-    const response = await supplyWithPermit({
+    return supplyWithPermit({
       underlyingToken,
       amountToSupply,
     });
-    return response;
   }
 };
 

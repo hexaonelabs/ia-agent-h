@@ -252,10 +252,12 @@ export class AgentService {
             output: JSON.stringify(output),
           };
         } catch (error) {
+          const message =
+            error?.details?.message || error.message || 'Unknown error';
           this._logger.error(
-            `❌ Error assistant "${agent.assistant.name}" executing tool ${tool.function.name}: ${error.message}`,
+            `❌ Error assistant "${agent.assistant.name}" executing tool ${tool.function.name}: ${message}`,
           );
-          return null;
+          throw new Error(message);
         }
       }),
     );
