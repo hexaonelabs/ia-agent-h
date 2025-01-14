@@ -98,13 +98,16 @@ export class AgentService {
   ): Promise<Assistant> {
     const { Name: name } = getAssistantConfig(fileName);
     const instructions = await getAssistantPrompt(fileName);
-    const tools = await getAssistantToolsFunction(fileName);
+    const toolsList = await getAssistantToolsFunction(fileName);
+    const tools = Object.values(toolsList).map((tool) => tool.definition);
+    const toolsName = tools.map((t) => t.function.name);
     this._logger.log(`🤖 Creating assistant: ${name}`);
+    this._logger.log(`🤖 Add tool to ${name}: ${JSON.stringify(toolsName)}`);
     return await client.beta.assistants.create({
       model: 'gpt-4o-mini',
       name,
       instructions,
-      tools: Object.values(tools).map((tool) => tool.definition),
+      tools,
     });
   }
 

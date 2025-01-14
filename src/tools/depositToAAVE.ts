@@ -1,6 +1,5 @@
 import { Address } from 'viem';
 import { providers, Wallet } from 'ethers';
-import { ToolConfig } from './index.js';
 import { Pool } from '@aave/contract-helpers';
 import { AaveV3Sepolia } from '@bgd-labs/aave-address-book';
 import { sepolia } from 'viem/chains';
@@ -23,59 +22,35 @@ const createEtherWalletClient = () => {
   return Wallet.fromMnemonic(mnemonic);
 };
 
-export const depositAaveTool: ToolConfig<DepositAaveArgs> = {
-  definition: {
-    type: 'function',
-    function: {
-      name: 'deposit_to_aave',
-      description: 'Deposit tokens into AAVE V3 Pool to generate yield',
-      parameters: {
-        type: 'object',
-        properties: {
-          underlyingToken: {
-            type: 'string',
-            pattern: '^0x[a-fA-F0-9]{40}$',
-            description: 'The token address to deposit',
-          },
-          amountToSupply: {
-            type: 'string',
-            description: 'The amount that will be supplied to the pool',
-          },
-          chainId: {
-            type: 'number',
-            description: 'The chain ID of the network',
-          },
-        },
-        required: ['underlyingToken', 'amountToSupply', 'chainId'],
-      },
-    },
-  },
-  handler: async ({ underlyingToken, amountToSupply, chainId }) => {
-    // if is testnet, use testnet pool
-    if (chainId === sepolia.id) {
-      const response = await supplyToAave({
-        underlyingToken,
-        amountToSupply,
-      });
-      return JSON.stringify(response);
-    } else {
-      const response = await supplyWithPermitToAave({
-        underlyingToken,
-        amountToSupply,
-      });
-      return JSON.stringify(response);
-    }
-  },
+export const depositToAAVE = async ({
+  underlyingToken,
+  amountToSupply,
+  chainId,
+}: DepositAaveArgs) => {
+  // if is testnet, use testnet pool
+  if (chainId === sepolia.id) {
+    const response = await supply({
+      underlyingToken,
+      amountToSupply,
+    });
+    return response;
+  } else {
+    const response = await supplyWithPermit({
+      underlyingToken,
+      amountToSupply,
+    });
+    return response;
+  }
 };
 
-export async function supplyToAave({
+export async function supply({
   underlyingToken,
   amountToSupply,
 }: {
   underlyingToken: string;
   amountToSupply: string;
 }): Promise<string[]> {
-  const logger = new ConsoleLogger('supplyToAave');
+  const logger = new ConsoleLogger('depositToAAVE - supply');
   try {
     // Create or recover wallet
     const walletClient = createEtherWalletClient();
@@ -130,14 +105,14 @@ export async function supplyToAave({
   }
 }
 
-export async function supplyWithPermitToAave({
+export async function supplyWithPermit({
   underlyingToken,
   amountToSupply,
 }: {
   underlyingToken: string;
   amountToSupply: string;
 }): Promise<string[]> {
-  const logger = new ConsoleLogger('supplyWithPermitToAave');
+  const logger = new ConsoleLogger('depositToAAVE - supplyWithPermit');
   try {
     // Create or recover wallet
     const walletClient = createEtherWalletClient();

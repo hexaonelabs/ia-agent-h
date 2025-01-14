@@ -1,0 +1,20 @@
+Name: deposit_to_aave
+Description: Deposit tokens into AAVE V3 Pool to generate yield
+Handler: src/tools/depositToAAVE
+Args: 
+  - Name: underlyingToken
+    Description: The token address to deposit
+    Required: true
+    Type: string
+    Pattern: ^0x[a-fA-F0-9]{40}$
+
+  - Name: amountToSupply
+    Description: The amount that will be supplied to the pool
+    Required: true
+    Type: string
+
+  - Name: chainId
+    Description: The chain ID of the network
+    Required: true
+    Type: number
+    Default: 11155111
