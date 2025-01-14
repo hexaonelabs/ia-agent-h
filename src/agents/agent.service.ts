@@ -266,6 +266,8 @@ export class AgentService {
         const ctrl = await getAssistantCtrl(fileName);
         const tools = await getAssistantToolsFunction(fileName);
         const agent = { assistant, ctrl, tools };
+        // start agent befor store it
+        await ctrl?.start(); // start the agent controller
         this._managedAgents[fileName] = agent;
         this._logger.log(`🤖 Assistant ${fileName} started`);
       } catch (error) {
