@@ -1,5 +1,5 @@
 import OpenAI from 'openai';
-import { getMarketDataTool, IMarketData } from '../tools/getMarketData';
+import { getMarketData, IMarketData } from '../tools/getMarketData';
 import { CustomLogger } from 'src/logger.service';
 
 export class MarketAgent {
@@ -12,7 +12,7 @@ export class MarketAgent {
 
   async start() {
     await new Promise((resolve) => setTimeout(resolve, 1000));
-    this._logger.log(`🚀 Starting IA Agent...`);
+    this._logger.log(`🚀 Starting ${MarketAgent.name} Agent...`);
     await this._monitoring();
   }
 
@@ -20,12 +20,12 @@ export class MarketAgent {
     const TIMEOUT = 60 * 30 * 1000;
     // request coin market data every 30 minutes
     this._logger.log(`🔄 Fetching market data...`);
-    const response = await getMarketDataTool.handler({
+    const { result } = await getMarketData({
       ticker: 'BTC',
       forceRefresh: false,
     });
     try {
-      const marketData: IMarketData = JSON.parse(response)?.[0];
+      const marketData: IMarketData = result?.[0];
       // build a message to send to the user
       const message = `The current price of ${marketData.name} is $${marketData.current_price} USD with a 24h change of ${marketData.price_change_percentage_24h}%`;
       // send the message to the user

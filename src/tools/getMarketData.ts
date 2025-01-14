@@ -1,5 +1,4 @@
 import axios from 'axios';
-import { ToolConfig } from '.';
 
 interface GetMarketDataArgs {
   ticker: string;
@@ -39,41 +38,9 @@ let cachedCoins: any[] | null = null;
 let cacheTimestamp: number | null = null;
 const CACHE_DURATION = 24 * 60 * 60 * 1000; // 24 hours in milliseconds
 
-export const getMarketDataTool: ToolConfig<GetMarketDataArgs> = {
-  definition: {
-    type: 'function',
-    function: {
-      strict: true,
-      name: 'get_market_data',
-      description: `Get the current market data for a cryptocurrency using ticker symbol to request Coingecko API.
-      `,
-      parameters: {
-        type: 'object',
-        properties: {
-          ticker: {
-            type: 'string',
-            description:
-              'The ticker symbol of the cryptocurrency to get market data for',
-          },
-        },
-        required: ['ticker'],
-        additionalProperties: false,
-      },
-    },
-  },
-  handler: async ({ ticker, forceRefresh }): Promise<string> => {
-    const coinId = await getCoinIdFromTicker(ticker, forceRefresh);
-    if (!coinId) {
-      throw new Error(`Coin ID not found for ticker: ${ticker}`);
-    }
-    const data = await getMarketData(coinId);
-    return JSON.stringify(data);
-  },
-};
-
 async function getCoinIdFromTicker(
   ticker: string,
-  forceRefresh: boolean,
+  forceRefresh?: boolean,
 ): Promise<string | null> {
   if (
     !forceRefresh &&
@@ -103,7 +70,9 @@ async function getCoinIdFromTicker(
   }
 }
 
-async function getMarketData(coinId: string): Promise<IMarketData[]> {
+async function getMarketDataFromCoingecko(
+  coinId: string,
+): Promise<IMarketData[]> {
   try {
     const response = await axios.get(
       `https://api.coingecko.com/api/v3/coins/markets`,
@@ -120,3 +89,15 @@ async function getMarketData(coinId: string): Promise<IMarketData[]> {
     throw new Error('Failed to fetch market data');
   }
 }
+
+export const getMarketData = async ({
+  ticker,
+  forceRefresh,
+}: GetMarketDataArgs): Promise<{ result: IMarketData[] }> => {
+  const coinId = await getCoinIdFromTicker(ticker, forceRefresh);
+  if (!coinId) {
+    throw new Error(`Coin ID not found for ticker: ${ticker}`);
+  }
+  const result = await getMarketDataFromCoingecko(coinId);
+  return { result };
+};

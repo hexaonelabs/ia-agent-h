@@ -1,34 +1,55 @@
-import * as fs from 'fs';
-import * as path from 'path';
-import * as yaml from 'js-yaml';
-import { readTools, writeTools } from '../tools';
+import { yamlToToolParser } from '../tools';
+import { getAssistantConfig, toCamelCase } from 'src/utils';
 
-// load file content from `characters/agent-h.yml` file
-const agentHPromptPath = path.join(process.cwd(), 'characters/agent-h.yml');
-const agentHPrompt = fs.readFileSync(agentHPromptPath, 'utf-8');
-const agentHPromptParsed = yaml.load(agentHPrompt);
+export const getAssistantPrompt = async (fileName: string = 'agent-h.yml') => {
+  // load file content from `characters/name.yml` file
+  const { Name, Description, Instructions, Tools } =
+    getAssistantConfig(fileName);
 
-export const assistantPrompt = `${agentHPromptParsed?.['Description']}
+  // get all tools names, group by type & normalize to camel case
+  const readToolsNames = Tools?.filter(({ type }) => type === 'read')
+    ?.map(({ Name }) => Name)
+    .filter(Boolean);
+  const readToolsFilesPath = readToolsNames.map(
+    (name) => `${toCamelCase(name)}.yml`,
+  );
+  const writeToolsNames = Tools?.filter(({ type }) => type === 'write')
+    ?.map(({ Name }) => Name)
+    .filter(Boolean);
+  const writeToolsFilesPath = writeToolsNames.map(
+    (name) => `${toCamelCase(name)}.yml`,
+  );
+  // load all tools from yaml files
+  const readTools = [];
+  await Promise.all(
+    readToolsFilesPath.map(async (filePath) => {
+      const { definition: tool } = await yamlToToolParser(filePath);
+      readTools.push(tool);
+    }),
+  );
+  const writeTools = [];
+  await Promise.all(
+    writeToolsFilesPath.map(async (filePath) => {
+      const { definition: tool } = await yamlToToolParser(filePath);
+      writeTools.push(tool);
+    }),
+  );
+  // build prompt string text
+  const assistantPrompt = `# ${Name}
+${Description}
 
-To acompish this mission you have access & you can perform allo these tools to execute multiples operations:
+${[...readTools, ...writeTools].length > 0 ? 'To acompish this mission you have access & you can perform allo these tools to execute multiples operations:' : ''}  
+${readTools.length > 0 ? '## 1 READ OPERATIONS:' : ''}
+${readTools.length > 0 ? readTools.map((tool) => `- "${tool.function.name}": ${tool.function.description}`).join('\n') : ''}
 
-1. READ OPERATIONS:
-${Object.values(readTools)
-  .map(
-    (tool) =>
-      `- "${tool.definition.function.name}": ${tool.definition.function.description}`,
-  )
-  .join('\n')}
+${writeTools.length > 0 ? '## 2 WRITE OPERATIONS:' : ''}
+${writeTools.length > 0 ? writeTools.map((tool) => `- "${tool.function.name}": ${tool.function.description}`).join('\n') : ''}
 
-2. WRITE OPERATIONS:
-${Object.values(writeTools)
-  .map(
-    (tool) =>
-      `- "${tool.definition.function.name}": ${tool.definition.function.description}`,
-  )
-  .join('\n')}
-
-${agentHPromptParsed?.['Instructions']}`;
+${Instructions ? '# INSTRUCTIONS:' : ''}
+${Instructions ? Instructions : ''}`;
+  // return prompt string text
+  return assistantPrompt;
+};
 
 export const xAgentPrompt = `You are connected on X (previously Twitter) to give a response to all tweet that talk about you and your technology because you are the next generation IA Blockchain Agent that will rise the bar of the industry.
 

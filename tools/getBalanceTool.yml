@@ -1,0 +1,16 @@
+Name: get_balance
+Description: Get the balance of a wallet on specified network
+Handler: tools/getBalance
+Args: 
+  - Name: wallet
+    Description: The wallet address to get the balance of
+    Required: true
+    Type: string
+    Pattern: ^0x[a-fA-F0-9]{40}$
+
+  - Name: network
+    Description: The network to get the balance on
+    Required: true
+    Type: string
+    Pattern: ^[a-zA-Z0-9]+$
+    Default: sepolia

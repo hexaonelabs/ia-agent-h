@@ -3,33 +3,48 @@ import OpenAI from 'openai';
 import { Thread } from 'openai/resources/beta/threads/threads';
 import { Assistant } from 'openai/resources/beta/assistants';
 import { Run } from 'openai/resources/beta/threads/runs/runs';
-import { tools } from '../tools/index';
-import { assistantPrompt } from '../const/prompt';
+
 import { parse } from 'marked';
-import * as p from 'path';
-import { getAgentsEnabled } from '../utils';
+// import { tools } from '../tools/index';
+import { getAssistantPrompt } from '../const/prompt';
+import {
+  getAssistantConfig,
+  getAssistantCtrl,
+  getAssistantsFileName,
+  getAssistantToolsFunction,
+} from '../utils';
 import { CustomLogger } from '../logger.service';
+import { ToolConfig } from 'src/tools';
 
 @Injectable()
 export class AgentService {
   private readonly _client: OpenAI;
-  private _assistant: Assistant;
-  private _managedAgents: Record<string, any> = {};
+  private _assistant?: Assistant;
+  private _managedAgents: Record<
+    string,
+    {
+      assistant: OpenAI.Beta.Assistants.Assistant;
+      tools: ToolConfig<any>[];
+      ctrl: {
+        start: () => Promise<void>;
+      };
+    }
+  > = {};
   public readonly threads: Thread[] = [];
   private readonly inMemoryThreadsMesssages: Record<string, string[]> = {};
   private readonly _logger = new CustomLogger(AgentService.name);
   constructor() {
     this._client = new OpenAI();
-    this._createAssistant(this._client).then((assistant) => {
-      this._assistant = assistant;
-    });
-    this._manageAgents();
+    this._createAssistant(this._client, 'agent-h')
+      .then((assistant) => {
+        this._assistant = assistant;
+      })
+      .then(async () => {
+        await this._manageAgents();
+      });
   }
 
   async createThread() {
-    if (!this._assistant) {
-      this._assistant = await this._createAssistant(this._client);
-    }
     try {
       const thread = await this._createThread(this._client);
       this.threads.push(thread);
@@ -49,9 +64,6 @@ export class AgentService {
       : this.threads.find((thread) => thread.id === threadId);
     if (!thread) {
       throw new Error('Thread not found');
-    }
-    if (!this._assistant) {
-      this._assistant = await this._createAssistant(this._client);
     }
     try {
       // Add the user's message to the thread
@@ -82,15 +94,17 @@ export class AgentService {
 
   private async _createAssistant(
     client: OpenAI,
-    name = 'AgentH',
-    instructions = assistantPrompt,
-    toolsAvailable = Object.values(tools).map((tool) => tool.definition),
+    fileName: string,
   ): Promise<Assistant> {
+    const { Name: name } = getAssistantConfig(fileName);
+    const instructions = await getAssistantPrompt(fileName);
+    const tools = await getAssistantToolsFunction(fileName);
+    this._logger.log(`🤖 Creating assistant: ${name}`);
     return await client.beta.assistants.create({
       model: 'gpt-4o-mini',
       name,
       instructions,
-      tools: toolsAvailable,
+      tools: Object.values(tools).map((tool) => tool.definition),
     });
   }
 
@@ -117,6 +131,9 @@ export class AgentService {
     );
     let run = await this._client.beta.threads.runs.create(thread.id, {
       assistant_id: assistantId,
+      tools: Object.values(this._managedAgents)
+        .flatMap((agent) => agent.tools)
+        .map((tool) => tool.definition),
     });
     // Wait for the run to complete and keep polling
     while (run.status === 'in_progress' || run.status === 'queued') {
@@ -153,7 +170,9 @@ export class AgentService {
     const assistantMessage = messages.data.find(
       (message) => message.role === 'assistant',
     );
-    this._logger.log(`🚀 Assistant message: ${assistantMessage?.content[0]}`);
+    this._logger.log(
+      `🚀 Assistant message: ${JSON.stringify(assistantMessage?.content[0])}`,
+    );
     // return response or default message
     return (
       assistantMessage?.content[0] || {
@@ -174,45 +193,55 @@ export class AgentService {
     this._logger.log(
       `🔧 Found ${toolCalls.length} tool calls: ${JSON.stringify(toolCalls)}`,
     );
+    // perform agent delegation logic
     const toolOutputs = await Promise.all(
       toolCalls.map(async (tool) => {
-        const ToolConfig = tools[tool.function.name];
+        // For each `tool_call`, find the agent that has the tool
+        const agent = Object.values(this._managedAgents).find((a) => {
+          return a.assistant.tools
+            .filter((t) => t.type === 'function')
+            .find((t) => t.function.name === tool.function.name)
+            ? a.assistant.tools
+            : null;
+        });
+        // then find the tool configuration
+        const ToolConfig = agent?.tools.find(
+          (t) => t.definition.function.name === tool.function.name,
+        );
         if (!ToolConfig) {
           this._logger.error(`Tool ${tool.function.name} not found`);
           return null;
         }
-
-        this._logger.log(`💾 Executing: ${tool.function.name}...`);
-
+        // finally execute the tool handler function
+        this._logger.log(
+          `💾 Assistant "${agent.assistant.name}" executing: ${tool.function.name}...`,
+        );
         try {
           const args = JSON.parse(tool.function.arguments);
           const output = await ToolConfig.handler(args);
           this._logger.log(
-            `🔧 Tool ${tool.function.name} output: ${JSON.stringify({ output })}`,
+            `🔧 Assistant "${agent.assistant.name}" tool ${tool.function.name} output: ${JSON.stringify({ output })}`,
           );
           return {
             tool_call_id: tool.id,
-            output: String(output),
+            output: JSON.stringify(output),
           };
         } catch (error) {
-          const errorMessage =
-            error instanceof Error ? error.message : String(error);
-          this._logger.log(
-            `❌ Tool ${tool.function.name} error: ${errorMessage}`,
+          this._logger.error(
+            `❌ Error assistant "${agent.assistant.name}" executing tool ${tool.function.name}: ${error.message}`,
           );
-          return {
-            tool_call_id: tool.id,
-            output: `Error: ${errorMessage}`,
-          };
+          return null;
         }
       }),
     );
 
-    const validOutputs = toolOutputs.filter(
-      Boolean,
-    ) as OpenAI.Beta.Threads.Runs.RunSubmitToolOutputsParams.ToolOutput[];
+    // Aggregate the results and return to the user
+    this._logger.log(
+      `🔧 Aggregated tool outputs: ${JSON.stringify(toolOutputs)}`,
+    );
+    const validOutputs = toolOutputs.filter(Boolean);
     if (validOutputs.length === 0) return run;
-
+    // Submit the tool outputs and poll for the run status
     return this._client.beta.threads.runs.submitToolOutputsAndPoll(
       thread.id,
       run.id,
@@ -221,26 +250,27 @@ export class AgentService {
   }
 
   private async _manageAgents() {
-    await new Promise((resolve) => setTimeout(resolve, 5000)); // Wait 5 second
-    // load agents list from `agents.config.yml` file
-    const path = p.join(process.cwd(), 'agents.config.yml');
-    const availableAgents = getAgentsEnabled(path);
-    this._logger.log(
-      `🤖 Agents enabled: ${availableAgents.map((agent) => agent.name).join(', ')}`,
-    );
-    // const availableAgents = [MarketAgentService];
-    availableAgents.forEach(async ({ name, ...args }) => {
+    await new Promise((resolve) => setTimeout(resolve, 5000)); // Wait 5 seconds
+    // load all files characters in the agents folder to get all files name
+    this._logger.log(`🤖 Loding assistant from 'charateres/{FILE_NAME}.yml`);
+    const agentsFileName = getAssistantsFileName();
+    if (agentsFileName.length === 0) {
+      this._logger.log('🤖 No other assistant found');
+      return;
+    }
+    this._logger.log(`🤖 Assistants enabled: ${agentsFileName.join(', ')}`);
+    // loop over the files name to get the assistant config
+    agentsFileName.forEach(async (fileName) => {
       try {
-        const fileName = name.toLowerCase().replace('agent', '.agent'); // myagent.agent.ts
-        const path = p.join(__dirname, fileName);
-        const agent = await import(path).then((module) => module[name]);
-        const instance = new agent(this._client, args);
-        await instance.start();
-        this._managedAgents[name] = instance;
-        this._logger.log(`🤖 Agent ${name} started`);
+        const assistant = await this._createAssistant(this._client, fileName);
+        const ctrl = await getAssistantCtrl(fileName);
+        const tools = await getAssistantToolsFunction(fileName);
+        const agent = { assistant, ctrl, tools };
+        this._managedAgents[fileName] = agent;
+        this._logger.log(`🤖 Assistant ${fileName} started`);
       } catch (error) {
         this._logger.error(
-          `🤖 Agent ${name} error: ${error?.message ? error?.message : ''}`,
+          `🤖 Assistant ${fileName} error: ${error?.message ? error?.message : ''}`,
         );
       }
     });

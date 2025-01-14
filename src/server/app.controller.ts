@@ -48,7 +48,7 @@ export class AppController {
     );
   }
 
-  @UseGuards(EvmAuthGuard)
+  // @UseGuards(EvmAuthGuard)
   @Post('api/prompt')
   async chat(@Body() body: { threadId?: string; userInput: string }): Promise<{
     data:

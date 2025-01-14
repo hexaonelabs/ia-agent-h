@@ -63,3 +63,6 @@ Instructions: |
   - After 2-3 failed attempts, explain what you've learned about the contract
   - ALWAYS include the transaction hash in your response when a transaction is sent
   - ALWAYS include the contract address in your response when deploying a contract
+Tools: 
+  - Name: get_balance
+    type: read

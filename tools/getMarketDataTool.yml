@@ -1,0 +1,9 @@
+Name: get_market_data
+Description: Get the current market data for a cryptocurrency using ticker symbol to request external API.
+Handler: tools/getMarketData
+Args: 
+  - Name: ticker
+    Description: The ticker symbol of the cryptocurrency to get market data for
+    Required: true
+    Type: string
+    Example: "ETH"
