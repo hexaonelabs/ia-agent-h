@@ -1,38 +1,20 @@
 import { Address } from 'viem';
-import { createViemPublicClient } from '../viem/createViemPublicClient.js';
-import { ToolConfig } from './index.js';
+import { createViemPublicClient } from '../viem/createViemPublicClient';
 import { formatEther } from 'viem';
+import { mainnet, sepolia } from 'viem/chains';
 
-interface GetBalanceArgs {
-  wallet: Address;
-}
-
-export const getBalanceTool: ToolConfig<GetBalanceArgs> = {
-  definition: {
-    type: 'function',
-    function: {
-      name: 'get_balance',
-      description: 'Get the balance of a wallet',
-      parameters: {
-        type: 'object',
-        properties: {
-          wallet: {
-            type: 'string',
-            pattern: '^0x[a-fA-F0-9]{40}$',
-            description: 'The wallet address to get the balance of',
-          },
-        },
-        required: ['wallet'],
-      },
-    },
-  },
-  handler: async ({ wallet }) => {
-    return await getBalance(wallet);
-  },
-};
-
-export async function getBalance(wallet: Address) {
-  const publicClient = createViemPublicClient();
+export async function getBalance(wallet: Address, network: string) {
+  const chain = getNetworkByName(network);
+  const publicClient = createViemPublicClient(chain);
   const balance = await publicClient.getBalance({ address: wallet });
   return formatEther(balance);
 }
+
+const getNetworkByName = (network: string) => {
+  switch (network) {
+    case 'mainnet':
+      return mainnet;
+    default:
+      return sepolia;
+  }
+};
