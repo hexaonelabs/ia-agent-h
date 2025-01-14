@@ -19,7 +19,10 @@ import { ToolConfig } from 'src/tools';
 @Injectable()
 export class AgentService {
   private readonly _client: OpenAI;
-  private _assistant?: Assistant;
+  private _agent?: {
+    assistant: Assistant;
+    tools: ToolConfig<any>[];
+  };
   private _managedAgents: Record<
     string,
     {
@@ -36,8 +39,11 @@ export class AgentService {
   constructor() {
     this._client = new OpenAI();
     this._createAssistant(this._client, 'agent-h')
-      .then((assistant) => {
-        this._assistant = assistant;
+      .then(async ({ assistant, tools }) => {
+        this._agent = {
+          assistant,
+          tools,
+        };
       })
       .then(async () => {
         await this._manageAgents();
@@ -95,20 +101,27 @@ export class AgentService {
   private async _createAssistant(
     client: OpenAI,
     fileName: string,
-  ): Promise<Assistant> {
+  ): Promise<{
+    assistant: Assistant;
+    tools: ToolConfig<any>[];
+  }> {
     const { Name: name } = getAssistantConfig(fileName);
     const instructions = await getAssistantPrompt(fileName);
-    const toolsList = await getAssistantToolsFunction(fileName);
-    const tools = Object.values(toolsList).map((tool) => tool.definition);
-    const toolsName = tools.map((t) => t.function.name);
+    const tools = await getAssistantToolsFunction(fileName);
+    const toolsDefinition = Object.values(tools).map((tool) => tool.definition);
+    const toolsName = toolsDefinition.map((t) => t.function.name);
     this._logger.log(`🤖 Creating assistant: ${name}`);
     this._logger.log(`🤖 Add tool to ${name}: ${JSON.stringify(toolsName)}`);
-    return await client.beta.assistants.create({
+    const assistant = await client.beta.assistants.create({
       model: 'gpt-4o-mini',
       name,
       instructions,
-      tools,
+      tools: toolsDefinition,
     });
+    return {
+      assistant,
+      tools,
+    };
   }
 
   private async _createThread(
@@ -128,15 +141,23 @@ export class AgentService {
   }
 
   private async _createRun(thread: Thread): Promise<Run> {
-    const assistantId = this._assistant.id;
+    const assistantId = this._agent?.assistant.id;
+    if (!assistantId) {
+      throw new Error('No assistant found');
+    }
     this._logger.log(
       `🚀 Creating run for thread ${thread.id} with assistant ${assistantId}`,
     );
     let run = await this._client.beta.threads.runs.create(thread.id, {
       assistant_id: assistantId,
-      tools: Object.values(this._managedAgents)
-        .flatMap((agent) => agent.tools)
-        .map((tool) => tool.definition),
+      tools: [
+        // agent tools
+        ...this._agent?.assistant.tools,
+        // add all other agents tools to the run that the assistant will know all the team capabilities
+        ...Object.values(this._managedAgents)
+          .flatMap((agent) => agent.tools)
+          .map((tool) => tool.definition),
+      ],
     });
     // Wait for the run to complete and keep polling
     while (run.status === 'in_progress' || run.status === 'queued') {
@@ -200,20 +221,21 @@ export class AgentService {
     const toolOutputs = await Promise.all(
       toolCalls.map(async (tool) => {
         // For each `tool_call`, find the agent that has the tool
-        const agent = Object.values(this._managedAgents).find((a) => {
-          return a.assistant.tools
-            .filter((t) => t.type === 'function')
-            .find((t) => t.function.name === tool.function.name)
-            ? a.assistant.tools
-            : null;
-        });
+        const agent = [...Object.values(this._managedAgents), this._agent].find(
+          (a) => {
+            return a.assistant.tools
+              .filter((t) => t.type === 'function')
+              .find((t) => t.function.name === tool.function.name)
+              ? a.assistant.tools
+              : null;
+          },
+        );
         // then find the tool configuration
         const ToolConfig = agent?.tools.find(
           (t) => t.definition.function.name === tool.function.name,
         );
         if (!ToolConfig) {
-          this._logger.error(`Tool ${tool.function.name} not found`);
-          return null;
+          throw new Error(`Tool ${tool.function.name} not found`);
         }
         // finally execute the tool handler function
         this._logger.log(
@@ -265,9 +287,11 @@ export class AgentService {
     // loop over the files name to get the assistant config
     agentsFileName.forEach(async (fileName) => {
       try {
-        const assistant = await this._createAssistant(this._client, fileName);
+        const { assistant, tools } = await this._createAssistant(
+          this._client,
+          fileName,
+        );
         const ctrl = await getAssistantCtrl(fileName);
-        const tools = await getAssistantToolsFunction(fileName);
         const agent = { assistant, ctrl, tools };
         // start agent befor store it
         if (ctrl) {
