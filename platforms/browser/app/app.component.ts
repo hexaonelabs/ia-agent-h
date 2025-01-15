@@ -9,7 +9,6 @@ const UIElements = [IonApp, IonRouterOutlet];
   selector: 'app-root',
   standalone: true,
   imports: [CommonModule, ReactiveFormsModule, ...UIElements],
-  host: { ngSkipHydration: 'true' },
   template: `
     <ion-app>
       <ion-router-outlet />

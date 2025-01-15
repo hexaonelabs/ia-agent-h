@@ -35,7 +35,10 @@
             }
           },
           "options": {
-            "assets": [],
+            "assets": [
+              "platforms/browser/favicon.ico",
+              "platforms/browser/assets"
+            ],
             "index": "platforms/browser/index.html",
             "browser": "platforms/browser/main.ts",
             "outputPath": "dist/platforms",

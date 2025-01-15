@@ -1,1 +1,193 @@
-<p>main-page works!</p>
+<ion-content class="ion-no-padding">
+  <!-- Hero Section -->
+  <ion-grid class="hero ion-no-padding">
+    <ion-row class="ion-justify-content-center ion-align-items-center">
+      <ion-col size="auto">
+        <img src="assets/img/hero.png" alt="Hero Image" />
+      </ion-col>
+      <ion-col data-aos="fade-right" class="ion-padding">
+        <h1
+          class="text-5xl md:text-6xl font-bold text-gray-900 dark:text-gray-100 leading-tight"
+        >
+          Start your own <br />
+          <span class="gradient-text">Intelligent Assistant</span>
+        </h1>
+        <p class="text-xl text-gray-300">
+          Agent-H is a simple, fast, and lightweight AI agent framework<br />
+          that provide flexible, scalable AI agents for everyone
+        </p>
+        <ion-button
+          class="my-6 font-semibold"
+          size="large"
+          shape="round"
+          (click)="getStarted()"
+        >
+          Get Started
+        </ion-button>
+        <ion-button class="my-6" size="large" shape="round" fill="clear">
+          Learn More
+        </ion-button>
+      </ion-col>
+    </ion-row>
+  </ion-grid>
+  <!-- slogan -->
+  <ion-grid class="slogan ion-no-padding ion-text-center">
+    <ion-row>
+      <ion-col class="ion-padding">
+        <ion-text class="text-gray-900 dark:text-gray-100 font-semibold">
+          When IA Agents work together, they can achieve great things
+        </ion-text>
+      </ion-col>
+    </ion-row>
+  </ion-grid>
+  <!-- Features -->
+   
+  <ion-grid fixed class="text-gray-900 dark:text-gray-100">
+    <ion-row class="flex justify-center items-center">
+      <ion-col size="12" class="text-center mt-16 mb-10">
+        <ion-text>
+          <h2 class="text-4xl font-bold">✨ Features ✨</h2>
+        </ion-text>
+      </ion-col>
+    </ion-row>
+    <ion-row>
+      <ion-col size="4">
+        <ion-card>
+          <ion-card-header>
+            <ion-card-title>🤖 IA Assistant Manager</ion-card-title>
+          </ion-card-header>
+          <ion-card-content>
+            Orchestrate and manage multiple AI agents efficiently. 
+          </ion-card-content>
+        </ion-card>
+      </ion-col>
+      <ion-col size="4">
+        <ion-card>
+          <ion-card-header>
+            <ion-card-title>🛠️ Highly Extensible</ion-card-title>
+          </ion-card-header>
+          <ion-card-content>
+            Create your own tools and agents assistant with ease.
+          </ion-card-content>
+        </ion-card>
+      </ion-col>
+      <ion-col size="4">
+        <ion-card>
+          <ion-card-header>
+            <ion-card-title>🔗 Direct Blockchain Interactions</ion-card-title>
+          </ion-card-header>
+          <ion-card-content>
+            Provide default tools for EVM Blockchain interactions.
+          </ion-card-content>
+        </ion-card>
+      </ion-col>
+    </ion-row>
+    <ion-row>
+      <ion-col size="4">
+        <ion-card>
+          <ion-card-header>
+            <ion-card-title>🔒 Secure and Private API Server</ion-card-title>
+          </ion-card-header>
+          <ion-card-content>
+            Include a NestJS server that exposes Agent to HTTP Requests.
+          </ion-card-content>
+        </ion-card>
+      </ion-col>
+      <ion-col size="4">
+        <ion-card>
+          <ion-card-header>
+            <ion-card-title>📚 Easily Configure & Run</ion-card-title>
+          </ion-card-header>
+          <ion-card-content>
+            Only one programming language framework & configuration based on yml file.
+          </ion-card-content>
+        </ion-card>
+      </ion-col>
+      <ion-col size="4">
+        <ion-card>
+          <ion-card-header>
+            <ion-card-title>🚀 Ready to Use and Deploy</ion-card-title>
+          </ion-card-header>
+          <ion-card-content>
+            Setup & deploy in less than 5 minutes.
+          </ion-card-content>
+        </ion-card>
+      </ion-col>
+    </ion-row>
+  </ion-grid>
+
+  <!-- About Section -->
+  <ion-grid fixed class="my-16">
+    <ion-row class="flex justify-center items-center">
+      <ion-col size="12" class="text-center">
+        <ion-text>
+          <h2 class="text-4xl font-bold">
+            About
+          </h2>
+          <p class="mt-4 text-lg">
+            Agent H is a NodeJS-based system that orchestrates AI agents with direct blockchain integration. This innovative framework combines modular design, EVM compatibility, and natural language processing to create powerful, decentralized applications.
+          </p>
+        </ion-text>
+      </ion-col>
+    </ion-row>
+  </ion-grid>
+
+  <!-- How It Works Section -->
+  <ion-grid fixed class="my-16 bg-purple-100 dark:bg-purple-600 p-8 rounded-lg">
+    <ion-row class="flex justify-center items-center">
+      <ion-col size="12" class="text-center">
+        <ion-text>
+          <h2 class="text-4xl font-bold">
+            How it work?
+          </h2>
+          <div class="mt-4 text-lg">
+            <ol class="list-decimal list-inside">
+              <li>Clonez repository</li>
+              <li>Configure variables</li>
+              <li>Start to use Agent-H</li>
+            </ol>
+          </div>
+        </ion-text>
+      </ion-col>
+    </ion-row>
+  </ion-grid>
+  
+
+  <!-- FAQ Section -->
+  <ion-grid fixed class="my-16 bg-gray-100 p-8 rounded-lg">
+    <ion-row class="flex justify-center items-center">
+      <ion-col size="12" class="text-center">
+        <ion-text>
+          <h2 class="text-4xl font-bold">FAQ</h2>
+          <div class="mt-4 text-lg">
+            <p>
+              <strong>Q: How can I start use Agent-H</strong>
+            </p>
+            <p>
+              A: Follow the steps in the "How it work?" section to set up and deploy Agent-H.
+            </p>
+            <p>
+              <strong>Q: What are the prerequisites for using Agent-H?</strong>
+            </p>
+            <p>
+              A: You will need Node.js 20+ and an OpenAI API key.
+            </p>
+          </div>
+        </ion-text>
+      </ion-col>
+    </ion-row>
+  </ion-grid>
+
+  <!-- Contact Section -->
+  <ion-grid fixed class="my-16">
+    <ion-row class="flex justify-center items-center">
+      <ion-col size="12" class="text-center">
+        <ion-text>
+          <h2 class="text-4xl font-bold">Contact</h2>
+          
+        </ion-text>
+      </ion-col>
+    </ion-row>
+  </ion-grid>
+
+</ion-content>

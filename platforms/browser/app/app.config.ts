@@ -8,7 +8,9 @@ import { routes } from './app.routes';
 export const config: ApplicationConfig = {
   providers: [
     provideRouter(routes),
-    provideIonicAngular(),
+    provideIonicAngular({
+      mode: 'ios',
+    }),
     provideClientHydration(),
     provideHttpClient(),
   ],
