@@ -28,22 +28,22 @@ import { sendOutline } from 'ionicons/icons';
 import { addIcons } from 'ionicons';
 import { AppService } from './app.service';
 
+const UIElements = [
+  IonApp,
+  IonHeader,
+  IonToolbar,
+  IonTitle,
+  IonContent,
+  IonFooter,
+  IonInput,
+  IonButton,
+  IonIcon,
+];
+
 @Component({
   selector: 'app-root',
   standalone: true,
-  imports: [
-    CommonModule,
-    ReactiveFormsModule,
-    IonApp,
-    IonHeader,
-    IonToolbar,
-    IonTitle,
-    IonContent,
-    IonFooter,
-    IonInput,
-    IonButton,
-    IonIcon,
-  ],
+  imports: [CommonModule, ReactiveFormsModule, ...UIElements],
   host: { ngSkipHydration: 'true' },
   template: `
     <ion-app>
@@ -105,7 +105,9 @@ export class App implements AfterViewInit {
   private readonly _document = inject(DOCUMENT);
 
   constructor(private readonly _appService: AppService) {
+    // define ionicons
     addIcons({ 'send-outline': sendOutline });
+    // use `afterNextRender` to scroll to bottom on server side rendering
     if (isPlatformServer(this._platform)) {
       afterNextRender(() => {
         this.scrollToBottom();
@@ -113,18 +115,32 @@ export class App implements AfterViewInit {
     }
   }
 
+  /**
+   * Scroll to the bottom of the messages container after the view is initialized.
+   * Only works on the browser.
+   */
   ngAfterViewInit() {
     if (isPlatformBrowser(this._platform)) {
       this.scrollToBottom();
     }
   }
 
-  messageInput = new FormControl('');
-  messages: Array<{ text: string; type: 'user' | 'assistant' }> = [
-    { text: 'How can I help you today?', type: 'assistant' },
-  ];
+  /**
+   * Form control for the message input.
+   */
+  public readonly messageInput = new FormControl('');
+  /**
+   * Array of messages to display in the chat.
+   */
+  public readonly messages: Array<{
+    text: string;
+    type: 'user' | 'assistant';
+  }> = [{ text: 'How can I help you today?', type: 'assistant' }];
   currentThreadId?: string;
 
+  /**
+   * Scroll to the bottom of the messages container.
+   */
   private async scrollToBottom() {
     try {
       await this.content.scrollToBottom(300);
@@ -133,6 +149,10 @@ export class App implements AfterViewInit {
     }
   }
 
+  /**
+   * Send a message to the assistant.
+   * @param event
+   */
   async sendMessage(event: Event) {
     event.preventDefault();
     const message = this.messageInput.value?.trim();
