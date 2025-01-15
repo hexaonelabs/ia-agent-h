@@ -26,6 +26,7 @@ import {
 } from '@ionic/angular/standalone';
 import { sendOutline } from 'ionicons/icons';
 import { addIcons } from 'ionicons';
+import { environment } from '../environments/environment';
 
 @Component({
   selector: 'app-root',
@@ -143,22 +144,22 @@ export class App implements AfterViewInit {
 
     try {
       if (message === ':test') {
-        const response = await fetch('/api/test');
-        const { data = [] } = await response.json();
-        this.messages.push({ text: data.join('\n'), type: 'assistant' });
+        const response = await fetch(environment.apiEndpoint + '/ping');
+        const { data = '' } = await response.json();
+        this.messages.push({ text: data, type: 'assistant' });
         await this.scrollToBottom();
         return;
       }
 
       if (message === ':logs') {
-        const response = await fetch('/api/logs');
+        const response = await fetch(environment.apiEndpoint + '/logs');
         const { data = [] } = await response.json();
         this.messages.push({ text: data.join('\n'), type: 'assistant' });
         await this.scrollToBottom();
         return;
       }
 
-      const response = await fetch('/api/prompt', {
+      const response = await fetch(environment.apiEndpoint + '/prompt', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({

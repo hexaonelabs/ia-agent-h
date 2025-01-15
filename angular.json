@@ -11,7 +11,13 @@
               "extractLicenses": false,
               "namedChunks": true,
               "optimization": false,
-              "sourceMap": true
+              "sourceMap": true,
+              "fileReplacements": [
+                {
+                  "replace": "platforms/browser/environments/environment.ts",
+                  "with": "platforms/browser/environments/environment.development.ts"
+                }
+              ]
             },
             "production": {
               "aot": true,
@@ -19,7 +25,13 @@
               "namedChunks": false,
               "optimization": true,
               "outputHashing": "all",
-              "sourceMap": false
+              "sourceMap": false,
+              "fileReplacements": [
+                {
+                  "replace": "platforms/browser/environments/environment.ts",
+                  "with": "platforms/browser/environments/environment.production.ts"
+                }
+              ]
             }
           },
           "options": {

@@ -45,6 +45,8 @@ replied_tweet_ids.csv
 .env.local
 agents.config.yml
 public/images/h-medias/*
+*.production.*
+*.development.*
 
 # temp directory
 .temp
