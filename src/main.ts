@@ -10,7 +10,11 @@ async function bootstrapServer() {
   const app = await NestFactory.create<NestExpressApplication>(AppModule, {
     logger: new CustomLogger(AppModule.name),
   });
+  // enable cors
+  app.enableCors();
+  // enable validation
   app.useGlobalPipes(new ValidationPipe());
+  // set global prefix
   app.setGlobalPrefix('api');
   // manage static files
   app.useStaticAssets(join(__dirname, '..', 'public'));
