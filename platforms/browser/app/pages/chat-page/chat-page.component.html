@@ -1,0 +1,46 @@
+<div
+  class="min-h-screen flex flex-col bg-gradient-to-br from-purple-900 via-blue-900 to-teal-800"
+>
+  <ion-header class="glass ion-no-border">
+    <ion-toolbar class="glass">
+      <ion-title class="text-2xl font-bold text-white text-center"
+        >Agent H</ion-title
+      >
+    </ion-toolbar>
+  </ion-header>
+
+  <ion-content #content class="ion-padding">
+    <div class="messages-container px-4 py-6 space-y-4">
+      <div
+        *ngFor="let message of messages"
+        class="animate-fade-in animate-slide-up flex"
+        [class.justify-end]="message.type === 'user'"
+        [class.justify-start]="message.type === 'assistant'"
+      >
+        <div
+          [ngClass]="{
+            'max-w-[85%] p-4 rounded-2xl break-words text-white': true,
+            'bg-white/20': message.type === 'user',
+            'bg-white/10': message.type === 'assistant',
+          }"
+        >
+          {{ message.text }}
+        </div>
+      </div>
+    </div>
+  </ion-content>
+
+  <ion-footer class="glass ion-no-border">
+    <form (submit)="sendMessage($event)" class="p-4 flex items-center gap-2">
+      <ion-input
+        [formControl]="messageInput"
+        class="flex-grow p-3 rounded-xl bg-white/10 border border-white/20 text-white"
+        placeholder="Type your message..."
+        fill="solid"
+      ></ion-input>
+      <ion-button type="submit" [strong]="true">
+        <ion-icon slot="icon-only" name="send-outline"></ion-icon>
+      </ion-button>
+    </form>
+  </ion-footer>
+</div>
