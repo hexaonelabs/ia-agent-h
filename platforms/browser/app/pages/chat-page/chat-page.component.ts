@@ -44,7 +44,7 @@ const UIElements = [
   standalone: true,
   imports: [CommonModule, ReactiveFormsModule, ...UIElements],
   templateUrl: './chat-page.component.html',
-  styleUrl: './chat-page.component.css',
+  styleUrl: './chat-page.component.scss',
 })
 export class ChatPageComponent implements AfterViewInit {
   @ViewChild('content') private content!: IonContent;
