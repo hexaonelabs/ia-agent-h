@@ -26,7 +26,7 @@ import {
 } from '@ionic/angular/standalone';
 import { sendOutline } from 'ionicons/icons';
 import { addIcons } from 'ionicons';
-import { environment } from '../environments/environment';
+import { AppService } from './app.service';
 
 @Component({
   selector: 'app-root',
@@ -104,7 +104,7 @@ export class App implements AfterViewInit {
   private readonly _platform = inject(PLATFORM_ID);
   private readonly _document = inject(DOCUMENT);
 
-  constructor() {
+  constructor(private readonly _appService: AppService) {
     addIcons({ 'send-outline': sendOutline });
     if (isPlatformServer(this._platform)) {
       afterNextRender(() => {
@@ -144,43 +144,35 @@ export class App implements AfterViewInit {
 
     try {
       if (message === ':test') {
-        const response = await fetch(environment.apiEndpoint + '/ping');
-        const { data = '' } = await response.json();
+        const { data = '' } = await this._appService.ping();
         this.messages.push({ text: data, type: 'assistant' });
         await this.scrollToBottom();
         return;
       }
 
       if (message === ':logs') {
-        const response = await fetch(environment.apiEndpoint + '/logs');
-        const { data = [] } = await response.json();
+        const { data = [] } = await this._appService.logs();
         this.messages.push({ text: data.join('\n'), type: 'assistant' });
         await this.scrollToBottom();
         return;
       }
 
-      const response = await fetch(environment.apiEndpoint + '/prompt', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          userInput: message,
-          threadId: this.currentThreadId,
-        }),
+      const { data } = await this._appService.prompt({
+        userInput: message,
+        threadId: this.currentThreadId,
       });
-
-      if (!response.ok) throw new Error('Failed to get response');
-
-      const { data = {} } = await response.json();
-      this.currentThreadId = data?.threadId;
+      this.currentThreadId = data.threadId;
       this.messages.push({
         text: data?.message || 'No response',
         type: 'assistant',
       });
       await this.scrollToBottom();
-    } catch (error) {
+    } catch (error: any) {
       console.error('Error:', error);
+      const message = error?.error?.message || error?.message || error.data;
       this.messages.push({
-        text: 'Sorry, I encountered an error processing your request.',
+        text:
+          message || 'Sorry, I encountered an error processing your request.',
         type: 'assistant',
       });
       await this.scrollToBottom();
