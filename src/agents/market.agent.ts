@@ -1,5 +1,5 @@
 import { getMarketData, IMarketData } from '../tools/getMarketData';
-import { CustomLogger } from 'src/logger.service';
+import { CustomLogger } from '../logger.service';
 
 export class MarketAgent {
   private readonly _logger = new CustomLogger(MarketAgent.name);

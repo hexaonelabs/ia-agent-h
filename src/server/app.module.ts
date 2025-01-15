@@ -3,8 +3,10 @@ import { AppController } from './app.controller';
 import { AppService } from './app.service';
 import { AgentService } from '../agents/agent.service';
 import { ConfigModule } from '@nestjs/config';
-import { CustomLogger } from 'src/logger.service';
+import { CustomLogger } from '../logger.service';
 import { JwtModule } from '@nestjs/jwt';
+import { ServeStaticModule } from '@nestjs/serve-static';
+import { join } from 'node:path';
 
 @Module({
   imports: [
@@ -12,6 +14,10 @@ import { JwtModule } from '@nestjs/jwt';
     JwtModule.register({
       secret: process.env.JWT_SECRET,
       signOptions: { expiresIn: '1h' },
+    }),
+    ServeStaticModule.forRoot({
+      rootPath: join(process.cwd(), 'dist', 'platforms', 'browser'),
+      exclude: ['/api*', '/debug*'],
     }),
   ],
   controllers: [AppController],

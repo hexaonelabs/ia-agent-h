@@ -61,7 +61,7 @@ export const getAssistantsFileName = () => {
       p.join(filePath, `${file}.yml`),
       'utf-8',
     );
-    const { Enabled } = yaml.load(fileContent);
+    const { Enabled } = yaml.load(fileContent) as any;
     return Enabled;
   });
   return enabledFilesName;
@@ -100,7 +100,7 @@ export const getAssistantConfig = (
     Instructions,
     Tools,
     Ctrl = undefined,
-  } = yaml.load(fileContent);
+  } = yaml.load(fileContent) as any;
   return { Name, Enabled, Description, Instructions, Tools, Ctrl };
 };
 

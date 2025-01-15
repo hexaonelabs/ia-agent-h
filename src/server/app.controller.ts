@@ -1,10 +1,11 @@
-import { Body, Controller, Get, Post, Render, UseGuards } from '@nestjs/common';
+import { Body, Controller, Get, Post, Res, UseGuards } from '@nestjs/common';
 import { AppService } from './app.service';
 import { AgentService } from '../agents/agent.service';
-import { createViemWalletClient } from 'src/viem/createViemWalletClient';
+import { createViemWalletClient } from '../viem/createViemWalletClient';
 import * as fs from 'fs';
 import * as p from 'path';
 import { EvmAuthGuard } from './evm-auth.guard';
+import { Response } from 'express';
 
 @Controller()
 export class AppController {
@@ -13,13 +14,11 @@ export class AppController {
     private readonly _agentService: AgentService,
   ) {}
 
-  @Get()
-  @Render('index')
-  async root() {
-    const { account } = createViemWalletClient();
-    return {
-      message: `${await this._appService.getHello()} My wallet address is ${account.address}`,
-    };
+  @Get('/')
+  serveStaticHtml(@Res() res: Response) {
+    res.sendFile(
+      p.join(process.cwd(), 'dist', 'platforms', 'browser', 'index.html'),
+    );
   }
 
   @UseGuards(EvmAuthGuard)
@@ -76,7 +75,7 @@ export class AppController {
     return response;
   }
 
-  @UseGuards(EvmAuthGuard)
+  // @UseGuards(EvmAuthGuard)
   @Get('api/logs')
   async getLogs() {
     try {

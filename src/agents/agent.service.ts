@@ -150,7 +150,7 @@ export class AgentService {
       assistant_id: assistantId,
       tools: [
         // agent tools
-        ...this._agent?.assistant.tools,
+        ...(this._agent?.assistant.tools || []),
         // add all other agents tools to the run that the assistant will know all the team capabilities
         ...Object.values(this._managedAgents)
           .flatMap((agent) => agent.tools)

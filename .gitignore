@@ -12,6 +12,7 @@ yarn-debug.log*
 yarn-error.log*
 lerna-debug.log*
 replied_tweet_ids.csv
+.angular
 
 # OS
 .DS_Store
