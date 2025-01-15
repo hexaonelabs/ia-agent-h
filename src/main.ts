@@ -3,15 +3,28 @@ import { AppModule } from './server/app.module';
 import { NestExpressApplication } from '@nestjs/platform-express';
 import { CustomLogger } from './logger.service';
 import { join } from 'node:path';
+import { DocumentBuilder, SwaggerModule } from '@nestjs/swagger';
+import { ValidationPipe } from '@nestjs/common';
 
 async function bootstrapServer() {
   const app = await NestFactory.create<NestExpressApplication>(AppModule, {
     logger: new CustomLogger(AppModule.name),
   });
+  app.useGlobalPipes(new ValidationPipe());
+  app.setGlobalPrefix('api');
   // manage static files
   app.useStaticAssets(join(__dirname, '..', 'public'));
-  app.setBaseViewsDir(join(__dirname, '..', 'views'));
-  app.setViewEngine('hbs');
+  // app.setBaseViewsDir(join(__dirname, '..', 'views'));
+  // app.setViewEngine('hbs');
+  const options = new DocumentBuilder()
+    .setTitle('Agent-H API Hub')
+    .setDescription('Here you can find all the endpoints for the Agent-H API')
+    .setVersion('1.0')
+    .addTag('agent-h')
+    .addBearerAuth()
+    .build();
+  const document = SwaggerModule.createDocument(app, options);
+  SwaggerModule.setup('api', app, document);
   return app;
 }
 

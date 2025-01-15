@@ -13,6 +13,7 @@ import {
   getAssistantPrompt,
 } from '../utils';
 import { CustomLogger } from '../logger.service';
+import { SendPromptDto } from 'src/server/dto/send-prompt.dto';
 
 @Injectable()
 export class AgentService {
@@ -60,7 +61,7 @@ export class AgentService {
     }
   }
 
-  async sendMessage(params: { threadId?: string; userInput: string }) {
+  async sendMessage(params: SendPromptDto) {
     const { threadId, userInput } = params;
     // find the thread by id or create a new one
     const thread = !threadId
