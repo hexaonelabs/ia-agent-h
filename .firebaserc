@@ -1,0 +1,14 @@
+{
+  "targets": {
+    "hexaonelabs": {
+      "hosting": {
+        "ia-agent-h": [
+          "ia-agent-h"
+        ]
+      }
+    }
+  },
+  "projects": {
+    "default": "hexaonelabs"
+  }
+}

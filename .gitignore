@@ -13,6 +13,11 @@ yarn-error.log*
 lerna-debug.log*
 replied_tweet_ids.csv
 .angular
+firebase-debug.log*
+firebase-debug.*.log*
+
+# Firebase cache
+.firebase/
 
 # OS
 .DS_Store
