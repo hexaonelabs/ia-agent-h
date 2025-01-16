@@ -1,6 +1,9 @@
 <ion-header mode="ios" class="ion-no-border" [translucent]="true">
   <ion-toolbar>
     <ion-title>Agent H</ion-title>
+    <ion-avatar slot="end" *ngIf="userAccount$|async as userAccount">
+      <img src="assets/agent-h-avatar.png" alt="Agent H" />
+    </ion-avatar>
   </ion-toolbar>
 </ion-header>
 <ion-content #content [fullscreen]="true" class="ion-padding bg-gradient-to-br from-purple-900 via-blue-900 to-teal-800">

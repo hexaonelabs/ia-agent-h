@@ -23,10 +23,15 @@ import {
   IonInput,
   IonButton,
   IonIcon,
+  ModalController,
+  IonAvatar,
+  IonButtons,
 } from '@ionic/angular/standalone';
 import { sendOutline } from 'ionicons/icons';
 import { addIcons } from 'ionicons';
 import { AppService } from '../../app.service';
+import { Observable, tap } from 'rxjs';
+import { ConnectUserModalComponent } from '../../components/connect-user-modal/connect-user-modal.component';
 
 const UIElements = [
   IonApp,
@@ -38,6 +43,8 @@ const UIElements = [
   IonInput,
   IonButton,
   IonIcon,
+  IonAvatar,
+  IonButtons,
 ];
 @Component({
   selector: 'app-chat-page',
@@ -50,8 +57,29 @@ export class ChatPageComponent implements AfterViewInit {
   @ViewChild('content') private content!: IonContent;
   private readonly _platform = inject(PLATFORM_ID);
   private readonly _document = inject(DOCUMENT);
+  public readonly userAccount$: Observable<`0x${string}` | undefined>;
 
-  constructor(private readonly _appService: AppService) {
+  constructor(
+    private readonly _appService: AppService,
+    private readonly _modalCtrl: ModalController,
+  ) {
+    this.userAccount$ = this._appService.account$.asObservable().pipe(
+      tap(async (account) => {
+        if (!account) {
+          const modal = await this._modalCtrl.create({
+            component: ConnectUserModalComponent,
+            backdropDismiss: false,
+            keyboardClose: false,
+          });
+          await modal.present();
+        } else {
+          const existingModal = await this._modalCtrl.getTop();
+          if (existingModal) {
+            await existingModal.dismiss();
+          }
+        }
+      }),
+    );
     // define ionicons
     addIcons({ 'send-outline': sendOutline });
     // use `afterNextRender` to scroll to bottom on server side rendering
@@ -144,5 +172,9 @@ export class ChatPageComponent implements AfterViewInit {
       });
       await this.scrollToBottom();
     }
+  }
+
+  async disconnectUser() {
+    await this._appService.disconnectWallet();
   }
 }
