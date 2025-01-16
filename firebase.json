@@ -1,6 +1,6 @@
 {
   "hosting": {
-    "target": "ia-agent-h",
+    "target": "ai-agent-h",
     "public": "dist/platforms/browser",
     "ignore": [
       "firebase.json",

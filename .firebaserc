@@ -2,8 +2,8 @@
   "targets": {
     "hexaonelabs": {
       "hosting": {
-        "ia-agent-h": [
-          "ia-agent-h"
+        "ai-agent-h": [
+          "ai-agent-h"
         ]
       }
     }
