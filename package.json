@@ -9,7 +9,7 @@
     "build": "nest build",
     "build:ui:pwa": "rm -rf dist && ng build agent-h",
     "predeploy:ui:fb": "npm run build:ui:pwa",
-    "deploy:ui:fb": "firebase deploy --only hosting:ia-agent-h",
+    "deploy:ui:fb": "firebase deploy --only hosting:ai-agent-h",
     "format": "prettier --write \"src/**/*.ts\" \"test/**/*.ts\"",
     "start": "nest start",
     "start:dev": "nest start --watch",
