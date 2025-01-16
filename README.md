@@ -1,23 +1,25 @@
 # Agent H 🤖 
 
-NodeJS Autonomous Agent Manager with direct blockchain interactions and an multiples AI assistant. Inspired by the [EizaOS](https://github.com/elizaOS/eliza) project this agent framework is based on NodeJS and is designed to be modular, extensible and  more easily to use and scale.
+Autonomous Agent Framework for NodeJS with Blockchain Integration
+This lightweight and modular framework enables the management of multiple AI assistants with direct blockchain interactions. Inspired by the [EizaOS](https://github.com/elizaOS/eliza) project, Agent H is designed to be more modular, extensible, and easier to use and scale.
 
 <div align="center">
   <img src="./public/images/agent-h-33.jpeg" alt="Agent H Banner" width="100%" />
 </div>
 
 ## Project Description
-Agent H is a NodeJS-based system that orchestrates AI agents with direct blockchain integration. This innovative framework combines modular design, EVM compatibility, and natural language processing to create powerful, decentralized applications. With rapid deployment and easy customization, Agent H empowers developers to build the future of AI-driven blockchain solutions in minutes, not months.
+Agent H is a NodeJS-based system that orchestrates AI agents with direct blockchain integration. This innovative minimal framework combines modular design, EVM compatibility, and natural language processing to create powerful, decentralized applications. With rapid deployment, minimum dependencies and easy customization, Agent H empowers developers to build the future of AI-driven blockchain solutions in minutes, not months.
 Unleash the power of intelligent, autonomous agents in the decentralized world with Agent H!
 
 ## ✨ Features
 
-- **🤖 IA Assistant manager**: orchestrate and manage multiple AI agent
-- **🛠️ Highly extensible**: create your own tools and agents assistant
+- **🤖 IA Assistant manager**: Orchestrate and manage multiple AI agent
+- **📦  Minimal Design**: Streamlined architecture for efficient operation
+- **🛠️ Highly extensible**: Create your own tools and agents assistant
 - **🔗 Direct blockchain interactions**: Provide default tools for EVM Blockchain interactions
 - **🔒 Secure and private API server Endpoint**: Include a NestJS server that expost Agent to HTTP Request
-- **📚 Easily configure & run:** only one programming language framework & configuration based on yml file
-- **🚀 Ready to use and deploy** setup & deploy in less than 5 minutes
+- **📚 Easily configure & run:** Only one programming language & configuration based on yml file
+- **🚀 Ready to use and deploy** Download, install, setup & deploy in less than 5 minutes
 
 
 ## 🚀 Quick Start
