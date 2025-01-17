@@ -27,12 +27,14 @@ import {
   IonAvatar,
   IonButtons,
   AlertController,
+  IonSpinner,
 } from '@ionic/angular/standalone';
 import { navigateOutline, powerOutline } from 'ionicons/icons';
 import { addIcons } from 'ionicons';
 import { AppService } from '../../app.service';
 import { Observable, tap } from 'rxjs';
 import { ConnectUserModalComponent } from '../../components/connect-user-modal/connect-user-modal.component';
+import { SafeHtmlPipe } from '../safe-html.pipe';
 
 const UIElements = [
   IonApp,
@@ -46,11 +48,12 @@ const UIElements = [
   IonIcon,
   IonAvatar,
   IonButtons,
+  IonSpinner,
 ];
 @Component({
   selector: 'app-chat-page',
   standalone: true,
-  imports: [CommonModule, ReactiveFormsModule, ...UIElements],
+  imports: [CommonModule, ReactiveFormsModule, SafeHtmlPipe, ...UIElements],
   templateUrl: './chat-page.component.html',
   styleUrl: './chat-page.component.scss',
 })
@@ -59,6 +62,7 @@ export class ChatPageComponent implements AfterViewInit {
   private readonly _platform = inject(PLATFORM_ID);
   private readonly _document = inject(DOCUMENT);
   public readonly userAccount$: Observable<`0x${string}` | undefined>;
+  public isPendingResponse: boolean = false;
 
   constructor(
     private readonly _appService: AppService,
@@ -143,18 +147,28 @@ export class ChatPageComponent implements AfterViewInit {
     this.messages.push({ text: message, type: 'user' });
     this.messageInput.reset();
     await this.scrollToBottom();
+    this.isPendingResponse = true;
+    this.messages.push({
+      text: ``,
+      type: 'assistant',
+    });
+    const lastMessage = this.messages[this.messages.length - 1];
+    await new Promise((resolve) => setTimeout(resolve, 250));
+    await this.scrollToBottom();
 
     try {
       if (message === ':test') {
         const { data = '' } = await this._appService.ping();
-        this.messages.push({ text: data, type: 'assistant' });
+        this.isPendingResponse = false;
+        lastMessage.text = data;
         await this.scrollToBottom();
         return;
       }
 
       if (message === ':logs') {
         const { data = [] } = await this._appService.logs();
-        this.messages.push({ text: data.join('\n'), type: 'assistant' });
+        this.isPendingResponse = false;
+        lastMessage.text = data.join('\n');
         await this.scrollToBottom();
         return;
       }
@@ -164,19 +178,13 @@ export class ChatPageComponent implements AfterViewInit {
         threadId: this.currentThreadId,
       });
       this.currentThreadId = data.threadId;
-      this.messages.push({
-        text: data?.message || 'No response',
-        type: 'assistant',
-      });
+      this.isPendingResponse = false;
+      lastMessage.text = data?.message || 'No response';
       await this.scrollToBottom();
     } catch (error: any) {
       console.error('Error:', error);
-      const message = error?.error?.message || error?.message || error.data;
-      this.messages.push({
-        text:
-          message || 'Sorry, I encountered an error processing your request.',
-        type: 'assistant',
-      });
+      this.isPendingResponse = false;
+      lastMessage.text = error?.error?.message || error?.message || error.data;
       await this.scrollToBottom();
     }
   }
