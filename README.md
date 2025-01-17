@@ -1,14 +1,21 @@
 # Agent H 🤖 
 
-Autonomous Agent Framework for NodeJS with Blockchain Integration
-This lightweight and modular framework enables the management of multiple AI assistants with direct blockchain interactions. Inspired by the [EizaOS](https://github.com/elizaOS/eliza) project, Agent H is designed to be more modular, extensible, and easier to use and scale.
+> Autonomous Agent Framework for NodeJS
+
+Agent-H, the little sister of [EizaOS](https://github.com/elizaOS/eliza), is a lightweight and modular framework that enables the management of multiple AI assistants. While inspired by the EizaOS project, This framework is designed to be more modular, extensible, and easier to use and scale. As a younger sibling in the AI agent family, Agent-H builds upon the foundation laid by ElizaOS, offering a fresh approach to autonomous agent frameworks with a focus on simplicity and blockchain integration.
+
 
 <div align="center">
   <img src="./public/images/agent-h-33.jpeg" alt="Agent H Banner" width="100%" />
 </div>
 
 ## Project Description
-Agent H is a NodeJS-based system that orchestrates AI agents with direct blockchain integration. This innovative minimal framework combines modular design, EVM compatibility, and natural language processing to create powerful, decentralized applications. With rapid deployment, minimum dependencies and easy customization, Agent H empowers developers to build the future of AI-driven blockchain solutions in minutes, not months.
+Agent-H represents a sophisticated autonomous agent framework designed for NodeJS, offering an innovative approach to AI assistant management with seamless blockchain integration. Emerging as the younger sibling of ElizaOS, this framework distinguishes itself through its modular architecture and advanced capabilities. The core of Agent-H is built around a robust service that leverages OpenAI's powerful language models to create intelligent and responsive assistants.
+
+At its heart, the framework enables dynamic creation and management of multiple AI agents, each capable of executing complex tasks through sophisticated tool handling and inter-agent communication. The system supports creating threads, sending messages, and managing conversations with remarkable flexibility. What sets Agent-H apart is its intelligent agent delegation mechanism, where different assistants can collaborate and execute tools across the ecosystem, creating a more interconnected and powerful AI environment.
+
+The framework's design emphasizes extensibility and ease of use, allowing developers to quickly configure new assistants by defining their specific instructions, tools, and behaviors through simple configuration files. Its advanced run management system ensures robust error handling, tool execution, and seamless interaction between agents. By integrating logging, dynamic tool management, and a flexible architecture, Agent-H provides developers with a powerful toolkit for building sophisticated, context-aware AI applications that can adapt and scale according to project requirements.
+
 Unleash the power of intelligent, autonomous agents in the decentralized world with Agent H!
 
 ## ✨ Features
