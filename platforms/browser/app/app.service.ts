@@ -6,6 +6,7 @@ import Provider, { EthereumProvider } from '@walletconnect/ethereum-provider';
 import { arbitrum, base, mainnet, optimism, sepolia } from 'viem/chains';
 import { LoadingController } from '@ionic/angular/standalone';
 import { createWalletClient, custom, WalletClient } from 'viem';
+import { getTotalWalletValue } from './app.utils';
 
 export const AVAILABLE_CHAINS = [
   { ...mainnet, logoURI: '/mainnet.svg' },
@@ -259,5 +260,15 @@ export class AppService {
     } catch (error) {
       throw error;
     }
+  }
+
+  /**
+   * Calculate the total worth of the wallet across all chains.
+   */
+  public async getTotalWalletWorth() {
+    const result = await getTotalWalletValue(
+      '0x1399b9c0228D4430b5cA9e9CCC21D594CBb6447A',
+    );
+    return result;
   }
 }

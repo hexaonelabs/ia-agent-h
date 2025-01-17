@@ -9,4 +9,7 @@
   ion-grid.slogan {
     background: var(--ion-color-primary);
   }
+  img.filterBrightnessContrast {
+    filter: brightness(1.1) contrast(1.3);
+  }
 }
