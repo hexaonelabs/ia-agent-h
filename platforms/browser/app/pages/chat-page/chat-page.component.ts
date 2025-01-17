@@ -70,15 +70,16 @@ export class ChatPageComponent implements AfterViewInit {
   ) {
     this.userAccount$ = this._appService.account$.pipe(
       tap(async (account) => {
-        if (!account) {
+        const existingModal = await this._modalCtrl.getTop();
+        if (!account && !existingModal) {
           const modal = await this._modalCtrl.create({
             component: ConnectUserModalComponent,
             backdropDismiss: false,
             keyboardClose: false,
           });
           await modal.present();
-        } else {
-          const existingModal = await this._modalCtrl.getTop();
+        }
+        if (account) {
           if (existingModal) {
             await existingModal.dismiss();
           }

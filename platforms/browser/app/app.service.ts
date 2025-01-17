@@ -31,7 +31,10 @@ export class AppService {
   );
   public readonly account$ = this._account$.asObservable().pipe(share());
   public signature$ = new BehaviorSubject<string | undefined>(undefined);
-  constructor(private readonly _http: HttpClient) {
+  constructor(
+    private readonly _http: HttpClient,
+    private readonly _loadingController: LoadingController,
+  ) {
     this._init();
   }
 
@@ -83,8 +86,10 @@ export class AppService {
       console.log('Session Event', event);
     });
     // connection uri
-    this._web3Provider.on('display_uri', (event) => {
+    this._web3Provider.on('display_uri', async (event) => {
       console.log('Display URI', event);
+      const loader = await this._loadingController.getTop();
+      loader?.dismiss();
     });
     // session disconnect
     this._web3Provider.on('disconnect', (event) => {
@@ -169,11 +174,11 @@ export class AppService {
   }
 
   async connectWalletAndAuthenticate() {
-    const loader = await new LoadingController().create();
-    await loader.present();
     if (!this._web3Provider) {
       throw new Error('Wallet provider not initialized');
     }
+    const loader = await this._loadingController.create();
+    await loader.present();
     // call connect method
     try {
       await this._web3Provider.connect({
@@ -187,6 +192,7 @@ export class AppService {
     // create read only provider client
     await this._createWalletClient(this._web3Provider);
     if (!account) {
+      loader?.dismiss();
       throw new Error('Account not found');
     }
     // sign message
