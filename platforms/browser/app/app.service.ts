@@ -28,7 +28,92 @@ export class AppService {
   public account$ = new BehaviorSubject<`0x${string}` | undefined>(undefined);
   public signature$ = new BehaviorSubject<string | undefined>(undefined);
   constructor(private readonly _http: HttpClient) {
-    console.log('AppService constructor');
+    this._init();
+  }
+
+  private async _init() {
+    // initialize wallet provider
+    const chains: number[] = AVAILABLE_CHAINS.map((c) => c.id);
+    this._web3Provider = await EthereumProvider.init({
+      projectId: environment.walletConnectProjectId,
+      showQrModal: true,
+      optionalChains: chains as any,
+    });
+    // chain changed
+    this._web3Provider.on('chainChanged', async (hexChainId) => {
+      console.log('Chain Changed', hexChainId);
+      const chainId = parseInt(hexChainId, 16);
+      const chain = AVAILABLE_CHAINS.find((c) => c.id === chainId);
+      if (!chain) {
+        return;
+      }
+      if (this.walletClient) {
+        this.walletClient.chain = chain;
+      }
+    });
+    // accounts changed
+    this._web3Provider.on('accountsChanged', async (accounts) => {
+      console.log('Accounts Changed', accounts);
+      if (
+        !accounts ||
+        accounts.length === 0 ||
+        !this.account$.value ||
+        accounts[0] === this.account$.value
+      ) {
+        return;
+      }
+      // new account connected, sign message and request token
+      const messsage = `Connect to Agent-H`;
+      await this.signMessage(accounts[0] as `0x${string}`, messsage);
+      await this.requestToken(
+        accounts[0] as `0x${string}`,
+        this.signature$.value as string,
+      );
+    });
+    // session established
+    this._web3Provider.on('connect', async (event) => {
+      console.log('Session Connected', event);
+    });
+    // session event - chainChanged/accountsChanged/custom events
+    this._web3Provider.on('session_event', (event) => {
+      console.log('Session Event', event);
+    });
+    // connection uri
+    this._web3Provider.on('display_uri', (event) => {
+      console.log('Display URI', event);
+    });
+    // session disconnect
+    this._web3Provider.on('disconnect', (event) => {
+      console.log('Session Disconnected', event);
+      this.account$.next(undefined);
+      this.signature$.next(undefined);
+    });
+    this._web3Provider.on('session_delete', (event) => {
+      console.log('Session Disconnected', event);
+      this.account$.next(undefined);
+      this.signature$.next(undefined);
+    });
+    // check if user is already connected
+    const isConnected = this._web3Provider?.connected;
+    if (!isConnected) {
+      return;
+    }
+    // get accounts
+    const result: `0x${string}`[] | undefined =
+      await this._web3Provider?.request({
+        method: 'eth_requestAccounts',
+      });
+    const account = result?.[0];
+    console.log({ result, isConnected });
+    if (!account) {
+      return;
+    }
+    await this._createWalletClient(this._web3Provider!);
+    await this.signMessage(account, 'Connect to Agent-H');
+    // request to get OR update token if user is authenticated
+    await this.requestToken(account, this.signature$.value as string);
+    // set BehaviorSubject values
+    this.account$.next(account);
   }
 
   async ping() {
@@ -39,8 +124,13 @@ export class AppService {
   }
 
   async logs() {
+    const token = localStorage.getItem('token');
+    const headers = new HttpHeaders({
+      'Content-Type': 'application/json',
+      Authorization: `Bearer ${token}`,
+    });
     const url = environment.apiEndpoint + '/logs';
-    const request = this._http.get<{ data: string[] }>(url);
+    const request = this._http.get<{ data: string[] }>(url, { headers });
     const response = await firstValueFrom(request);
     return response;
   }
@@ -74,78 +164,12 @@ export class AppService {
     return response;
   }
 
-  async connectWalletAndSignMessage() {
+  async connectWalletAndAuthenticate() {
     const loader = await new LoadingController().create();
     await loader.present();
-    const chains: number[] = AVAILABLE_CHAINS.map((c) => c.id);
     if (!this._web3Provider) {
-      this._web3Provider = await EthereumProvider.init({
-        projectId: '434d438ca5da706dc5cbf4f0ccdf89df',
-        showQrModal: true,
-        optionalChains: chains as any,
-      });
+      throw new Error('Wallet provider not initialized');
     }
-    // chain changed
-    // this._web3Provider.on('chainChanged', async (hexChainId) => {});
-    // accounts changed
-    this._web3Provider.on('accountsChanged', async (accounts) => {
-      console.log('Accounts Changed', accounts);
-      if (
-        !accounts ||
-        accounts.length === 0 ||
-        accounts[0] === this.account$.value
-      ) {
-        return;
-      }
-      if (!this.walletClient) {
-        // create read only provider client
-        const chain =
-          AVAILABLE_CHAINS.find(
-            (c) =>
-              c.id ===
-              (this._web3Provider?.chainId ||
-                this._web3Provider?.chainId ||
-                DEFAULT_CHAIN.id),
-          ) ?? DEFAULT_CHAIN;
-        this.walletClient = createWalletClient({
-          chain,
-          transport: custom(this._web3Provider as any),
-          account: accounts[0] as `0x${string}`,
-        });
-      }
-      const messsage = `Authenticated on Agent-H platform`;
-      await this.signMessage(accounts[0] as `0x${string}`, messsage);
-      await this.requestToken();
-      // update value
-      this.account$.next(accounts[0] as `0x${string}`);
-    });
-    // session established
-    this._web3Provider.on('connect', async (event) => {
-      console.log('Session Connected', event);
-    });
-    // session event - chainChanged/accountsChanged/custom events
-    this._web3Provider.on('session_event', (event) => {
-      console.log('Session Event', event);
-    });
-    // connection uri
-    this._web3Provider.on('display_uri', (event) => {
-      console.log('Display URI', event);
-      // ensure loader is dismissed
-      loader?.dismiss();
-    });
-    // session disconnect
-    this._web3Provider.on('disconnect', (event) => {
-      console.log('Session Disconnected', event);
-      this.account$.next(undefined);
-      this.signature$.next(undefined);
-      loader?.dismiss();
-    });
-    this._web3Provider.on('session_delete', (event) => {
-      console.log('Session Disconnected', event);
-      this.account$.next(undefined);
-      this.signature$.next(undefined);
-      loader?.dismiss();
-    });
     // call connect method
     try {
       await this._web3Provider.connect({
@@ -155,20 +179,22 @@ export class AppService {
       await this.disconnectWallet();
       return;
     }
+    const account = this._web3Provider.accounts[0] as `0x${string}`;
     // create read only provider client
-    const chain =
-      AVAILABLE_CHAINS.find(
-        (c) =>
-          c.id ===
-          (this._web3Provider?.chainId ||
-            this._web3Provider?.chainId ||
-            DEFAULT_CHAIN.id),
-      ) ?? DEFAULT_CHAIN;
-    this.walletClient = createWalletClient({
-      chain,
-      transport: custom(this._web3Provider),
-      account: this._web3Provider.accounts[0] as `0x${string}`,
-    });
+    await this._createWalletClient(this._web3Provider);
+    if (!account) {
+      throw new Error('Account not found');
+    }
+    // sign message
+    const messsage = `Connect to Agent-H`;
+    await this.signMessage(account, messsage);
+    // request token
+    await this.requestToken(account, this.signature$.value as string);
+    // update value
+    this.account$.next(account);
+    // ensure loader is dismissed
+    loader?.dismiss();
+    // end of method. User is connected and authenticated with the server
   }
 
   async disconnectWallet() {
@@ -177,12 +203,12 @@ export class AppService {
     this.account$.next(undefined);
   }
 
-  async requestToken() {
-    const url = environment.apiEndpoint + '/evmSignIn';
+  async requestToken(address: `0x${string}`, signature: string) {
+    const url = environment.apiEndpoint + '/auth/evm-signin';
     const body = {
-      address: this.account$.value,
-      signature: this.signature$.value,
-      message: 'Authenticated on Agent-H platform',
+      address,
+      signature,
+      message: 'Connect to Agent-H',
     };
     const request = this._http.post<{ access_token: string }>(url, body);
     const response = await firstValueFrom(request);
@@ -195,7 +221,9 @@ export class AppService {
     if (!this.walletClient) {
       throw new Error('Wallet not connected');
     }
-    const loader = await new LoadingController().create();
+    const loader = await new LoadingController().create({
+      message: 'Waiting for signature...',
+    });
     await loader.present();
     try {
       const result = await this.walletClient?.signMessage({
@@ -207,6 +235,21 @@ export class AppService {
     } catch (error) {
       this.signature$.next(undefined);
       loader.dismiss();
+      throw error;
+    }
+  }
+
+  private async _createWalletClient(provider: Provider) {
+    try {
+      const account = this._web3Provider?.accounts[0] as `0x${string}`;
+      const chainId = this._web3Provider!.chainId;
+      const chain = AVAILABLE_CHAINS.find((c) => c.id === chainId);
+      this.walletClient = createWalletClient({
+        chain,
+        transport: custom(provider),
+        account,
+      });
+    } catch (error) {
       throw error;
     }
   }

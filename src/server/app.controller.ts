@@ -1,4 +1,4 @@
-import { Body, Controller, Get, Post, Res } from '@nestjs/common';
+import { Body, Controller, Get, Post, Res, UseGuards } from '@nestjs/common';
 import { AppService } from './app.service';
 import { AgentService } from '../agents/agent.service';
 import * as fs from 'fs';
@@ -12,6 +12,7 @@ import {
 } from '@nestjs/swagger';
 import { SendPromptDto } from './dto/send-prompt.dto';
 import { PromptAPIResponse } from './entities/prompt-api-response.entity';
+import { EvmAuthGuard } from './evm-auth.guard';
 
 // @ApiBearerAuth()
 @ApiTags('Agent-H')
@@ -49,7 +50,7 @@ export class AppController {
     );
   }
 
-  // @UseGuards(EvmAuthGuard)
+  @UseGuards(EvmAuthGuard)
   @ApiOperation({ summary: `Send a prompt to ia agent manager` })
   @ApiResponse({
     status: 200,
@@ -77,7 +78,7 @@ export class AppController {
     return response;
   }
 
-  // @UseGuards(EvmAuthGuard)
+  @UseGuards(EvmAuthGuard)
   @Get('/logs')
   async getLogs() {
     try {

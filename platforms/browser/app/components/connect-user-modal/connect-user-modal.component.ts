@@ -31,9 +31,9 @@ export class ConnectUserModalComponent {
   constructor(public _appService: AppService) {}
 
   async connectWallet(btn: IonButton) {
-    btn.disabled = true;
+    // btn.disabled = true;
     try {
-      await this._appService.connectWalletAndSignMessage();
+      await this._appService.connectWalletAndAuthenticate();
     } catch (error) {
       btn.disabled = false;
     }
