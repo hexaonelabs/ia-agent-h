@@ -60,19 +60,25 @@ export class AppController {
   @ApiResponse({ status: 403, description: 'Forbidden.' })
   @Post('/prompt')
   async chat(@Body() body: SendPromptDto): Promise<{
-    data:
-      | {
-          threadId: string;
-          message: string;
-        }
-      | string;
+    data: {
+      threadId: string;
+      message: string;
+    };
     success: boolean;
   }> {
+    let threadId = body.threadId;
+    if (!threadId) {
+      const thread = await this._agentService.createThread();
+      threadId = thread.id;
+    }
     const response = await this._agentService
-      .sendMessage(body)
+      .sendMessage({ ...body, threadId })
       .then((data) => ({ data, success: true }))
       .catch((error) => ({
-        data: error instanceof Error ? error.message : 'Unknown error',
+        data: {
+          threadId,
+          message: error instanceof Error ? error.message : 'Unknown error',
+        },
         success: false,
       }));
     return response;

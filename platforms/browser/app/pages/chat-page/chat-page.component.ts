@@ -177,7 +177,9 @@ export class ChatPageComponent implements AfterViewInit {
         userInput: message,
         threadId: this.currentThreadId,
       });
-      this.currentThreadId = data.threadId;
+      if (data.threadId) {
+        this.currentThreadId = data.threadId;
+      }
       this.isPendingResponse = false;
       lastMessage.text = data?.message || 'No response';
       await this.scrollToBottom();
