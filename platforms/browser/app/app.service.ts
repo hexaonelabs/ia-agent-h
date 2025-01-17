@@ -221,6 +221,10 @@ export class AppService {
     if (!this.walletClient) {
       throw new Error('Wallet not connected');
     }
+    if (!environment.production) {
+      this.signature$.next(environment.defaultEVMSignature);
+      return;
+    }
     const loader = await new LoadingController().create({
       message: 'Waiting for signature...',
     });

@@ -1,11 +1,3 @@
-<ion-header mode="ios" class="ion-no-border" [translucent]="true">
-  <ion-toolbar>
-    <ion-title>Agent H</ion-title>
-    <ion-avatar slot="end" *ngIf="userAccount$|async as userAccount">
-      <img src="assets/agent-h-avatar.png" alt="Agent H" />
-    </ion-avatar>
-  </ion-toolbar>
-</ion-header>
 <ion-content #content [fullscreen]="true" class="ion-padding bg-gradient-to-br from-purple-900 via-blue-900 to-teal-800">
   <div class="messages-container px-4 py-6 space-y-4">
     <div
@@ -27,7 +19,7 @@
   </div>
 </ion-content>
 
-<ion-footer class="glass ion-no-border">
+<ion-footer  *ngIf="userAccount$|async as userAccount" class="glass ion-no-border">
   <form (submit)="sendMessage($event)" class="p-3 flex items-center gap-2">
     <ion-input
       [formControl]="messageInput"
