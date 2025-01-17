@@ -1,5 +1,12 @@
-<ion-content #content [fullscreen]="true" class="ion-padding bg-gradient-to-br from-purple-900 via-blue-900 to-teal-800">
-  <div class="messages-container px-4 py-6 space-y-4">
+<ion-content #content mode="ios" [fullscreen]="true" class="ion-no-padding bg-gradient-to-br from-blue-900 to-purple-800">
+  <ion-toolbar>
+    <ion-buttons slot="end" *ngIf="userAccount$|async as userAccount">
+      <ion-button (click)="disconnectUser()">
+        <ion-icon name="power-outline"></ion-icon>
+      </ion-button>
+    </ion-buttons>
+  </ion-toolbar>
+  <div class="messages-container px-4 py-6 space-y-4" *ngIf="userAccount$|async as userAccount">
     <div
       *ngFor="let message of messages"
       class="animate-fade-in animate-slide-up flex"
@@ -8,9 +15,9 @@
     >
       <div
         [ngClass]="{
-          'max-w-[85%] p-4 rounded-2xl break-words text-white': true,
-          'bg-white/20': message.type === 'user',
-          'bg-white/10': message.type === 'assistant',
+          'max-w-[85%] p-4 break-words text-white': true,
+          'bg-white/20 rounded-bl-2xl rounded-tl-2xl rounded-tr-2xl': message.type !== 'assistant',
+          'bg-white/10 rounded-t-2xl rounded-r-2xl ': message.type === 'assistant',
         }"
       >
         {{ message.text }}
@@ -19,7 +26,7 @@
   </div>
 </ion-content>
 
-<ion-footer  *ngIf="userAccount$|async as userAccount" class="glass ion-no-border">
+<ion-footer mode="ios" *ngIf="userAccount$|async as userAccount" class="glass ion-no-border"  [translucent]="true">
   <form (submit)="sendMessage($event)" class="p-3 flex items-center gap-2">
     <ion-input
       [formControl]="messageInput"
@@ -28,7 +35,7 @@
       fill="solid"
     ></ion-input>
     <ion-button type="submit" [strong]="true">
-      <ion-icon slot="icon-only" name="send-outline"></ion-icon>
+      <ion-icon slot="icon-only" name="navigate-outline"></ion-icon>
     </ion-button>
   </form>
 </ion-footer>

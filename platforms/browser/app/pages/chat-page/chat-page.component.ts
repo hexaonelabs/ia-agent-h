@@ -26,8 +26,9 @@ import {
   ModalController,
   IonAvatar,
   IonButtons,
+  AlertController,
 } from '@ionic/angular/standalone';
-import { sendOutline } from 'ionicons/icons';
+import { navigateOutline, powerOutline } from 'ionicons/icons';
 import { addIcons } from 'ionicons';
 import { AppService } from '../../app.service';
 import { Observable, tap } from 'rxjs';
@@ -63,7 +64,7 @@ export class ChatPageComponent implements AfterViewInit {
     private readonly _appService: AppService,
     private readonly _modalCtrl: ModalController,
   ) {
-    this.userAccount$ = this._appService.account$.asObservable().pipe(
+    this.userAccount$ = this._appService.account$.pipe(
       tap(async (account) => {
         if (!account) {
           const modal = await this._modalCtrl.create({
@@ -77,11 +78,17 @@ export class ChatPageComponent implements AfterViewInit {
           if (existingModal) {
             await existingModal.dismiss();
           }
+          if (this.messages.length === 0) {
+            this.messages.push({
+              text: 'Hi darling. How can I help you today?',
+              type: 'assistant',
+            });
+          }
         }
       }),
     );
     // define ionicons
-    addIcons({ 'send-outline': sendOutline });
+    addIcons({ navigateOutline, powerOutline });
     // use `afterNextRender` to scroll to bottom on server side rendering
     if (isPlatformServer(this._platform)) {
       afterNextRender(() => {
@@ -110,7 +117,7 @@ export class ChatPageComponent implements AfterViewInit {
   public readonly messages: Array<{
     text: string;
     type: 'user' | 'assistant';
-  }> = [{ text: 'How can I help you today?', type: 'assistant' }];
+  }> = [];
   currentThreadId?: string;
 
   /**
@@ -174,7 +181,29 @@ export class ChatPageComponent implements AfterViewInit {
     }
   }
 
+  /**
+   * Prompt user to ensure they want to disconnect.
+   */
   async disconnectUser() {
+    const ionAlert = await new AlertController().create({
+      header: 'Disconnect Wallet',
+      message: 'Are you sure you want to disconnect your wallet?',
+      buttons: [
+        {
+          text: 'Cancel',
+          role: 'cancel',
+        },
+        {
+          text: 'Disconnect',
+          role: 'ok',
+        },
+      ],
+    });
+    await ionAlert.present();
+    const { role } = await ionAlert.onDidDismiss();
+    if (role !== 'ok') {
+      return;
+    }
     await this._appService.disconnectWallet();
   }
 }

@@ -1,7 +1,7 @@
 import { HttpClient, HttpHeaders } from '@angular/common/http';
 import { Injectable } from '@angular/core';
 import { environment } from '../environments/environment';
-import { BehaviorSubject, firstValueFrom } from 'rxjs';
+import { BehaviorSubject, firstValueFrom, share } from 'rxjs';
 import Provider, { EthereumProvider } from '@walletconnect/ethereum-provider';
 import { arbitrum, base, mainnet, optimism, sepolia } from 'viem/chains';
 import { LoadingController } from '@ionic/angular/standalone';
@@ -25,7 +25,10 @@ export const DEFAULT_CHAIN =
 export class AppService {
   private _web3Provider: Provider | undefined;
   public walletClient: WalletClient | null = null;
-  public account$ = new BehaviorSubject<`0x${string}` | undefined>(undefined);
+  private readonly _account$ = new BehaviorSubject<`0x${string}` | undefined>(
+    undefined,
+  );
+  public readonly account$ = this._account$.asObservable().pipe(share());
   public signature$ = new BehaviorSubject<string | undefined>(undefined);
   constructor(private readonly _http: HttpClient) {
     this._init();
@@ -57,8 +60,8 @@ export class AppService {
       if (
         !accounts ||
         accounts.length === 0 ||
-        !this.account$.value ||
-        accounts[0] === this.account$.value
+        !this._account$.value ||
+        accounts[0] === this._account$.value
       ) {
         return;
       }
@@ -85,12 +88,12 @@ export class AppService {
     // session disconnect
     this._web3Provider.on('disconnect', (event) => {
       console.log('Session Disconnected', event);
-      this.account$.next(undefined);
+      this._account$.next(undefined);
       this.signature$.next(undefined);
     });
     this._web3Provider.on('session_delete', (event) => {
       console.log('Session Disconnected', event);
-      this.account$.next(undefined);
+      this._account$.next(undefined);
       this.signature$.next(undefined);
     });
     // check if user is already connected
@@ -113,7 +116,7 @@ export class AppService {
     // request to get OR update token if user is authenticated
     await this.requestToken(account, this.signature$.value as string);
     // set BehaviorSubject values
-    this.account$.next(account);
+    this._account$.next(account);
   }
 
   async ping() {
@@ -191,7 +194,7 @@ export class AppService {
     // request token
     await this.requestToken(account, this.signature$.value as string);
     // update value
-    this.account$.next(account);
+    this._account$.next(account);
     // ensure loader is dismissed
     loader?.dismiss();
     // end of method. User is connected and authenticated with the server
@@ -200,7 +203,7 @@ export class AppService {
   async disconnectWallet() {
     await this._web3Provider?.disconnect();
     this.signature$.next(undefined);
-    this.account$.next(undefined);
+    this._account$.next(undefined);
   }
 
   async requestToken(address: `0x${string}`, signature: string) {
