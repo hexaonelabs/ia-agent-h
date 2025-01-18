@@ -42,6 +42,7 @@
     "@angular/router": "^18.1.0",
     "@angular/ssr": "^18.2.12",
     "@bgd-labs/aave-address-book": "^4.7.3",
+    "@enzymefinance/sdk": "^1.2.3",
     "@ionic/angular": "^8.4.1",
     "@nestjs/common": "^10.0.0",
     "@nestjs/config": "^3.3.0",

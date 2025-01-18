@@ -13,6 +13,7 @@ import {
 import { SendPromptDto } from './dto/send-prompt.dto';
 import { PromptAPIResponse } from './entities/prompt-api-response.entity';
 import { EvmAuthGuard } from './evm-auth.guard';
+import { TokenHolderGuard } from './token-holder.guard';
 
 // @ApiBearerAuth()
 @ApiTags('Agent-H')
@@ -34,11 +35,12 @@ export class AppController {
   @Get('/ping')
   async test() {
     return {
-      data: 'Hello World',
+      data: 'success',
       success: true,
     };
   }
 
+  @UseGuards(TokenHolderGuard)
   @Post('/auth/evm-signin')
   async evmSignIn(
     @Body() body: { address: string; signature: string; message: string },

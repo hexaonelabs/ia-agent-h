@@ -1,6 +1,7 @@
 import * as fs from 'fs';
 import * as yaml from 'js-yaml';
 import * as p from 'path';
+import { arbitrum, mainnet, sepolia } from 'viem/chains';
 
 export interface ToolConfig<T = any> {
   definition: {
@@ -265,4 +266,15 @@ ${Instructions ? '# INSTRUCTIONS:' : ''}
 ${Instructions ? Instructions : ''}`;
   // return prompt string text
   return assistantPrompt;
+};
+
+export const getNetworkByName = (network: string) => {
+  switch (network) {
+    case 'mainnet':
+      return mainnet;
+    case 'arbitrum':
+      return arbitrum;
+    default:
+      return sepolia;
+  }
 };
