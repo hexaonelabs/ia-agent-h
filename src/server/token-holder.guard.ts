@@ -1,7 +1,6 @@
 import { Injectable, CanActivate, ExecutionContext } from '@nestjs/common';
 import { JwtService } from '@nestjs/jwt';
-import { getTokenBalance } from 'src/tools/getTokenBalance';
-import { arbitrum } from 'viem/chains';
+import { getTokenBalance } from '../tools/getTokenBalance';
 
 @Injectable()
 export class TokenHolderGuard implements CanActivate {
@@ -21,7 +20,7 @@ export class TokenHolderGuard implements CanActivate {
       const result = await getTokenBalance({
         walletAddress: address as `0x${string}`,
         tokenAddress: process.env.ENZYME_FUND_ADDRESS as `0x${string}`,
-        chainId: arbitrum.id,
+        network: 'arbirtrum',
       });
       return Number(result) > 10 ? true : false;
     } catch {

@@ -1,13 +1,13 @@
 import { Address } from 'viem';
 import { createViemPublicClient } from '../viem/createViemPublicClient';
-import { arbitrum, base, mainnet, optimism, sepolia } from 'viem/chains';
+import { getNetworkByName } from '../utils';
 
 interface ReadContractArgs {
   contract: Address;
   functionName: string;
   args?: any[];
   abi: any[];
-  chainId: number;
+  network: string;
 }
 
 export async function readContract({
@@ -15,11 +15,9 @@ export async function readContract({
   functionName,
   args,
   abi,
-  chainId,
+  network,
 }: ReadContractArgs) {
-  const chain = [mainnet, optimism, arbitrum, base, sepolia].find(
-    (c) => c.id === chainId,
-  );
+  const chain = getNetworkByName(network);
   if (!chain) {
     throw new Error('Invalid chainId');
   }

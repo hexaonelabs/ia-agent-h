@@ -27,9 +27,9 @@ Args:
     Items:
       Type: object 
 
-  - Name: chainId
-    Description: The network chain ID to read the contract on
+  - Name: network
+    Description: The network name to to read the contract on
     Required: true
-    Type: number
-    Pattern: ^[0-9]+$
-    Default: 11155111
+    Type: string
+    Pattern: ^[a-zA-Z0-9]+$
+    Default: sepolia

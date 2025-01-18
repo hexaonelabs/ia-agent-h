@@ -6,7 +6,7 @@ import { ERC20_ABI } from '../const/contractDetails';
 interface GetTokenBalanceArgs {
   tokenAddress: Address;
   walletAddress: Address;
-  chainId: number;
+  network: string;
 }
 
 /**
@@ -17,7 +17,7 @@ interface GetTokenBalanceArgs {
 export const getTokenBalance = async ({
   tokenAddress,
   walletAddress,
-  chainId,
+  network,
 }: GetTokenBalanceArgs) => {
   // Get decimals first
   const decimals = await readContract({
@@ -25,7 +25,7 @@ export const getTokenBalance = async ({
     functionName: 'decimals',
     args: [],
     abi: ERC20_ABI,
-    chainId,
+    network,
   });
   // Get balance
   const balance = await readContract({
@@ -33,7 +33,7 @@ export const getTokenBalance = async ({
     functionName: 'balanceOf',
     args: [walletAddress],
     abi: ERC20_ABI,
-    chainId,
+    network,
   });
   // Format the balance with proper decimals
   const formattedBalance = formatUnits(
