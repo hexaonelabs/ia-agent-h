@@ -53,6 +53,7 @@ export class AppController {
   }
 
   @UseGuards(EvmAuthGuard)
+  @UseGuards(TokenHolderGuard)
   @ApiOperation({ summary: `Send a prompt to ia agent manager` })
   @ApiResponse({
     status: 200,
@@ -87,6 +88,7 @@ export class AppController {
   }
 
   @UseGuards(EvmAuthGuard)
+  @UseGuards(TokenHolderGuard)
   @Get('/logs')
   async getLogs() {
     try {
