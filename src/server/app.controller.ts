@@ -1,11 +1,22 @@
-import { Body, Controller, Get, Post, Render, UseGuards } from '@nestjs/common';
+import { Body, Controller, Get, Post, Res, UseGuards } from '@nestjs/common';
 import { AppService } from './app.service';
 import { AgentService } from '../agents/agent.service';
-import { createViemWalletClient } from 'src/viem/createViemWalletClient';
 import * as fs from 'fs';
 import * as p from 'path';
+import { Response } from 'express';
+import {
+  ApiTags,
+  ApiExcludeEndpoint,
+  ApiOperation,
+  ApiResponse,
+} from '@nestjs/swagger';
+import { SendPromptDto } from './dto/send-prompt.dto';
+import { PromptAPIResponse } from './entities/prompt-api-response.entity';
 import { EvmAuthGuard } from './evm-auth.guard';
+import { TokenHolderGuard } from './token-holder.guard';
 
+// @ApiBearerAuth()
+@ApiTags('Agent-H')
 @Controller()
 export class AppController {
   constructor(
@@ -13,31 +24,24 @@ export class AppController {
     private readonly _agentService: AgentService,
   ) {}
 
-  @Get()
-  @Render('index')
-  async root() {
-    const { account } = createViemWalletClient();
-    return {
-      message: `${await this._appService.getHello()} My wallet address is ${account.address}`,
-    };
+  @ApiExcludeEndpoint()
+  @Get('')
+  serveStaticHtml(@Res() res: Response) {
+    res.sendFile(
+      p.join(process.cwd(), 'dist', 'platforms', 'browser', 'index.html'),
+    );
   }
 
-  @UseGuards(EvmAuthGuard)
-  @Get('api')
-  async getHello() {
-    const { account } = createViemWalletClient();
-    return `${await this._appService.getHello()} My wallet address is ${account.address}`;
-  }
-
-  @Get('api/test')
+  @Get('/ping')
   async test() {
     return {
-      data: 'Hello World',
+      data: 'success',
       success: true,
     };
   }
 
-  @Post('/api/auth/evm-signin')
+  @UseGuards(TokenHolderGuard)
+  @Post('/auth/evm-signin')
   async evmSignIn(
     @Body() body: { address: string; signature: string; message: string },
   ) {
@@ -48,36 +52,44 @@ export class AppController {
     );
   }
 
-  // @UseGuards(EvmAuthGuard)
-  @Post('api/prompt')
-  async chat(@Body() body: { threadId?: string; userInput: string }): Promise<{
-    data:
-      | {
-          threadId: string;
-          message: string;
-        }
-      | string;
+  @UseGuards(EvmAuthGuard)
+  @UseGuards(TokenHolderGuard)
+  @ApiOperation({ summary: `Send a prompt to ia agent manager` })
+  @ApiResponse({
+    status: 200,
+    description: 'The prompt was sent successfully',
+    type: PromptAPIResponse,
+  })
+  @ApiResponse({ status: 403, description: 'Forbidden.' })
+  @Post('/prompt')
+  async chat(@Body() body: SendPromptDto): Promise<{
+    data: {
+      threadId: string;
+      message: string;
+    };
     success: boolean;
   }> {
-    // return {
-    //   data: {
-    //     message: body.userInput,
-    //     threadId: body.threadId,
-    //   },
-    //   success: true,
-    // };
+    let threadId = body.threadId;
+    if (!threadId) {
+      const thread = await this._agentService.createThread();
+      threadId = thread.id;
+    }
     const response = await this._agentService
-      .sendMessage(body)
+      .sendMessage({ ...body, threadId })
       .then((data) => ({ data, success: true }))
       .catch((error) => ({
-        data: error instanceof Error ? error.message : 'Unknown error',
+        data: {
+          threadId,
+          message: error instanceof Error ? error.message : 'Unknown error',
+        },
         success: false,
       }));
     return response;
   }
 
   @UseGuards(EvmAuthGuard)
-  @Get('api/logs')
+  @UseGuards(TokenHolderGuard)
+  @Get('/logs')
   async getLogs() {
     try {
       // read logs from app.logs

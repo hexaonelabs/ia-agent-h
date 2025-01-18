@@ -98,7 +98,9 @@ export async function supply({
     // return transactions hash
     return txHashes;
   } catch (error) {
-    logger.error('❌ Error supplying to Aave:', error);
+    logger.error(
+      `❌ Error supplying to Aave: ${error.message || error?.details || error || 'An error occurred while supplying action.'}`,
+    );
     throw error;
   }
 }

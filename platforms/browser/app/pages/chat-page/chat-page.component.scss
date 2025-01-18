@@ -1,0 +1,61 @@
+:host {
+
+  ion-content {
+    --background: transparent;
+    // overflow-y: auto;
+    scrollbar-width: thin;
+    scrollbar-color: rgba(155, 155, 155, 0.5) transparent;
+
+    ion-toolbar {
+      --background: transparent;
+      position: sticky;
+      top: 0;
+      z-index: 0;
+      padding: 0.75rem;
+    }
+  }
+  .glass {
+    background: rgba(255, 255, 255, 0.1);
+    backdrop-filter: blur(10px);
+  }
+  
+  header.glass {
+    border-bottom: 1px solid rgba(255, 255, 255, 0.2);
+  }
+  
+  form.glass {
+    border-top: 1px solid rgba(255, 255, 255, 0.2);
+  }
+  ion-input {
+    --padding-start: 0.5rem;
+  }
+  
+  // main {
+  //   height: calc(100% - 86px);
+  //   position: fixed;
+  //   width: 100%;
+  //   top: 86px;
+  //   padding-top: 0.5rem;
+  //   padding-bottom: 0rem;
+  // }
+  
+  .messages-container > div > div {
+    position: relative;
+    // height: calc(100% - 5px);
+    // padding: 0 0.5rem 6rem;
+  }
+  
+  ion-content::-webkit-scrollbar {
+    width: 6px;
+  }
+  
+  ion-content::-webkit-scrollbar-track {
+    background: transparent;
+  }
+  
+  ion-content::-webkit-scrollbar-thumb {
+    background-color: rgba(155, 155, 155, 0.5);
+    border-radius: 20px;
+    border: transparent;
+  }
+}

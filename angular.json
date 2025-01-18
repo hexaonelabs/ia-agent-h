@@ -1,0 +1,76 @@
+{
+  "$schema": "./node_modules/@angular/cli/lib/config/schema.json",
+  "newProjectRoot": "projects",
+  "projects": {
+    "agent-h": {
+      "architect": {
+        "build": {
+          "builder": "@angular-devkit/build-angular:application",
+          "configurations": {
+            "development": {
+              "extractLicenses": false,
+              "namedChunks": true,
+              "optimization": false,
+              "sourceMap": true,
+              "fileReplacements": [
+                {
+                  "replace": "platforms/browser/environments/environment.ts",
+                  "with": "platforms/browser/environments/environment.development.ts"
+                }
+              ]
+            },
+            "production": {
+              "aot": true,
+              "extractLicenses": true,
+              "namedChunks": false,
+              "optimization": true,
+              "outputHashing": "all",
+              "sourceMap": false,
+              "fileReplacements": [
+                {
+                  "replace": "platforms/browser/environments/environment.ts",
+                  "with": "platforms/browser/environments/environment.production.ts"
+                }
+              ]
+            }
+          },
+          "options": {
+            "assets": [
+              "platforms/browser/favicon.ico",
+              "platforms/browser/assets"
+            ],
+            "index": "platforms/browser/index.html",
+            "browser": "platforms/browser/main.ts",
+            "outputPath": "dist/platforms",
+            "polyfills": [
+              "zone.js"
+            ],
+            "scripts": [],
+            "styles": [
+              "platforms/browser/global_styles.css"
+            ],
+            "tsConfig": "./platforms/browser/tsconfig.app.json"
+          }
+        },
+        "serve": {
+          "builder": "@angular-devkit/build-angular:dev-server",
+          "configurations": {
+            "development": {
+              "buildTarget": "agent-h:build:development"
+            },
+            "production": {
+              "buildTarget": "agent-h:build:production"
+            }
+          },
+          "defaultConfiguration": "development"
+        }
+      },
+      "prefix": "app",
+      "projectType": "application",
+      "root": "",
+      "schematics": {},
+      "sourceRoot": "platforms/browser"
+    }
+  },
+  "version": 1
+}

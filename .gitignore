@@ -12,6 +12,12 @@ yarn-debug.log*
 yarn-error.log*
 lerna-debug.log*
 replied_tweet_ids.csv
+.angular
+firebase-debug.log*
+firebase-debug.*.log*
+
+# Firebase cache
+.firebase/
 
 # OS
 .DS_Store
@@ -44,6 +50,8 @@ replied_tweet_ids.csv
 .env.local
 agents.config.yml
 public/images/h-medias/*
+*.production.*
+*.development.*
 
 # temp directory
 .temp

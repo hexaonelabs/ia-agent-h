@@ -13,6 +13,7 @@ import {
   getAssistantPrompt,
 } from '../utils';
 import { CustomLogger } from '../logger.service';
+import { SendPromptDto } from 'src/server/dto/send-prompt.dto';
 
 @Injectable()
 export class AgentService {
@@ -60,7 +61,7 @@ export class AgentService {
     }
   }
 
-  async sendMessage(params: { threadId?: string; userInput: string }) {
+  async sendMessage(params: SendPromptDto) {
     const { threadId, userInput } = params;
     // find the thread by id or create a new one
     const thread = !threadId
@@ -150,7 +151,7 @@ export class AgentService {
       assistant_id: assistantId,
       tools: [
         // agent tools
-        ...this._agent?.assistant.tools,
+        ...(this._agent?.assistant.tools || []),
         // add all other agents tools to the run that the assistant will know all the team capabilities
         ...Object.values(this._managedAgents)
           .flatMap((agent) => agent.tools)
@@ -173,16 +174,22 @@ export class AgentService {
     }
     // manage error if status is failed
     if (run.status === 'failed') {
-      const errorMessage = `I encountered an error: ${run.last_error?.message || 'Unknown error'}`;
+      const errorMessage = `${run.last_error?.message || 'Unknown error'}`;
       this._logger.error('Run failed:', run.last_error);
       await this._client.beta.threads.messages.create(thread.id, {
         role: 'assistant',
         content: errorMessage,
       });
+      // generate response based on the error message to better explain the error
+      const value = await this.generateErrorResponse(errorMessage);
+      await this._client.beta.threads.messages.create(thread.id, {
+        role: 'assistant',
+        content: value,
+      });
       return {
         type: 'text',
         text: {
-          value: errorMessage,
+          value,
           annotations: [],
         },
       };
@@ -216,55 +223,53 @@ export class AgentService {
       `🔧 Found ${toolCalls.length} tool calls: ${JSON.stringify(toolCalls)}`,
     );
     // perform agent delegation logic
-    const toolOutputs = await Promise.all(
-      toolCalls.map(async (tool) => {
-        // For each `tool_call`, find the agent that has the tool
-        const agent = [...Object.values(this._managedAgents), this._agent].find(
-          (a) => {
-            return a.assistant.tools
-              .filter((t) => t.type === 'function')
-              .find((t) => t.function.name === tool.function.name)
-              ? a.assistant.tools
-              : null;
-          },
-        );
-        // then find the tool configuration
-        const ToolConfig = agent?.tools.find(
-          (t) => t.definition.function.name === tool.function.name,
-        );
-        if (!ToolConfig) {
-          throw new Error(`Tool ${tool.function.name} not found`);
-        }
-        // finally execute the tool handler function
-        this._logger.log(
-          `💾 Assistant "${agent.assistant.name}" executing: ${tool.function.name}...`,
-        );
-        try {
-          const args = JSON.parse(tool.function.arguments);
-          const output = await ToolConfig.handler(args);
-          this._logger.log(
-            `🔧 Assistant "${agent.assistant.name}" tool ${tool.function.name} output: ${JSON.stringify({ output })}`,
-          );
-          return {
-            tool_call_id: tool.id,
-            output: JSON.stringify(output),
-          };
-        } catch (error) {
-          const message =
-            error?.details?.message || error.message || 'Unknown error';
-          this._logger.error(
-            `❌ Error assistant "${agent.assistant.name}" executing tool ${tool.function.name}: ${message}`,
-          );
-          throw new Error(message);
-        }
-      }),
-    );
-
+    const toolOutputs = [];
+    for (const tool of toolCalls) {
+      // For each `tool_call`, find the agent that has the tool
+      const agent = [...Object.values(this._managedAgents), this._agent].find(
+        (a) => {
+          return a.assistant.tools
+            .filter((t) => t.type === 'function')
+            .find((t) => t.function.name === tool.function.name)
+            ? a.assistant.tools
+            : null;
+        },
+      );
+      // then find the tool configuration
+      const ToolConfig = agent?.tools.find(
+        (t) => t.definition.function.name === tool.function.name,
+      );
+      if (!ToolConfig) {
+        throw new Error(`Tool ${tool.function.name} not found`);
+      }
+      // finally execute the tool handler function
+      this._logger.log(
+        `💾 Assistant "${agent.assistant.name}" executing: ${tool.function.name}...`,
+      );
+      const args = JSON.parse(tool.function.arguments);
+      // handle error OR response to send to the assistant
+      const output = await ToolConfig.handler(args).catch((error) => {
+        const message =
+          error?.message ||
+          error ||
+          `An error occured while executing ${tool.function.name}`;
+        return `ERROR: ${message}`;
+      });
+      this._logger.log(
+        `🔧 Assistant "${agent.assistant.name}" tool ${tool.function.name} output: ${JSON.stringify({ output })}`,
+      );
+      toolOutputs.push({
+        tool_call_id: tool.id,
+        output: JSON.stringify(output),
+      });
+    }
     // Aggregate the results and return to the user
     this._logger.log(
       `🔧 Aggregated tool outputs: ${JSON.stringify(toolOutputs)}`,
     );
     const validOutputs = toolOutputs.filter(Boolean);
+    // exclude empty outputs and while performing the tool calls until
+    // all the outputs are valid with a value event if it's an error message
     if (validOutputs.length === 0) return run;
     // Submit the tool outputs and poll for the run status
     return this._client.beta.threads.runs.submitToolOutputsAndPoll(
@@ -305,5 +310,34 @@ export class AgentService {
         );
       }
     });
+  }
+
+  /**
+   * When an error occurs, this function is called to generate a response
+   * that explains the error to a noob.
+   * @param errorMessage
+   * @returns
+   */
+  async generateErrorResponse(errorMessage: string): Promise<string> {
+    const prompt = `I encountered an error explain to a noobs: ${errorMessage}`;
+    try {
+      const response = await this._client.chat.completions.create({
+        messages: [
+          {
+            role: 'system',
+            content: prompt,
+          },
+        ],
+        model: 'gpt-3.5-turbo',
+        n: 1,
+        max_tokens: 100,
+        temperature: 0.7,
+      });
+      const explanation = response.choices[0].message.content.trim();
+      return explanation;
+    } catch (error) {
+      console.error('Error during message generation:', error);
+      return 'AN error occured while generating the response';
+    }
   }
 }

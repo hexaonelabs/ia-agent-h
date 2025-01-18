@@ -1,0 +1,52 @@
+import { Injectable, CanActivate, ExecutionContext } from '@nestjs/common';
+import { JwtService } from '@nestjs/jwt';
+import { getERC20TokenBalance } from 'src/tools/getTokenERC20Balance';
+
+@Injectable()
+export class TokenHolderGuard implements CanActivate {
+  constructor(private jwtService: JwtService) {}
+
+  async canActivate(context: ExecutionContext): Promise<boolean> {
+    const request = context.switchToHttp().getRequest();
+    const address = await this.extractAddressFromRequest(request);
+    const isWhiteListed = await this.isWhiteListed(address);
+    if (!address) {
+      return false;
+    }
+    if (isWhiteListed) {
+      return true;
+    }
+    try {
+      const result = await getERC20TokenBalance({
+        walletAddress: address as `0x${string}`,
+        tokenAddress: process.env.ENZYME_FUND_ADDRESS as `0x${string}`,
+        network: 'arbitrum',
+      });
+      return Number(result) > 10 ? true : false;
+    } catch {
+      return false;
+    }
+  }
+
+  private async extractAddressFromRequest(
+    request: any,
+  ): Promise<string | undefined> {
+    return (
+      request?.body?.address ||
+      request['user']?.address ||
+      (await this.jwtService.verify(this.extractTokenFromHeader(request)))
+        ?.address
+    );
+  }
+
+  private extractTokenFromHeader(request: any): string | undefined {
+    const [type, token] = request.headers.authorization?.split(' ') ?? [];
+    return type === 'Bearer' ? token : undefined;
+  }
+
+  private async isWhiteListed(address: string): Promise<boolean> {
+    return (
+      process.env.WHITE_LISTED_ADDRESSES?.split(',')?.includes(address) || false
+    );
+  }
+}

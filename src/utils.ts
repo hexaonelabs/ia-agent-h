@@ -1,6 +1,7 @@
 import * as fs from 'fs';
 import * as yaml from 'js-yaml';
 import * as p from 'path';
+import { arbitrum, mainnet, sepolia } from 'viem/chains';
 
 export interface ToolConfig<T = any> {
   definition: {
@@ -61,7 +62,7 @@ export const getAssistantsFileName = () => {
       p.join(filePath, `${file}.yml`),
       'utf-8',
     );
-    const { Enabled } = yaml.load(fileContent);
+    const { Enabled } = yaml.load(fileContent) as any;
     return Enabled;
   });
   return enabledFilesName;
@@ -100,7 +101,7 @@ export const getAssistantConfig = (
     Instructions,
     Tools,
     Ctrl = undefined,
-  } = yaml.load(fileContent);
+  } = yaml.load(fileContent) as any;
   return { Name, Enabled, Description, Instructions, Tools, Ctrl };
 };
 
@@ -265,4 +266,15 @@ ${Instructions ? '# INSTRUCTIONS:' : ''}
 ${Instructions ? Instructions : ''}`;
   // return prompt string text
   return assistantPrompt;
+};
+
+export const getNetworkByName = (network: string) => {
+  switch (network) {
+    case 'mainnet':
+      return mainnet;
+    case 'arbitrum':
+      return arbitrum;
+    default:
+      return sepolia;
+  }
 };

@@ -1,0 +1,315 @@
+<ion-content class="ion-no-padding">
+  <!-- Hero Section -->
+  <ion-grid class="hero ion-no-padding">
+    <ion-row
+      class="ion-justify-content-center ion-align-items-center flex-wrap-reverse md:flex-wrap"
+    >
+      <ion-col size="12" size-md="auto">
+        <img src="assets/img/hero.png" alt="Hero Image" />
+      </ion-col>
+      <ion-col data-aos="fade-right" class="ion-padding pt-32 md:pt-0">
+        <h1
+          class="text-5xl md:text-6xl font-bold text-gray-900 dark:text-gray-100"
+        >
+          Accelerate With <br />
+          <span class="gradient-text">Intelligent Assistant</span>
+        </h1>
+        <p class="text-xl text-gray-300">
+          Adaptive AI Agents Framework for Strategic Asset Management.
+        </p>
+        <ion-button
+          class="my-6 font-semibold"
+          size="large"
+          shape="round"
+          (click)="getStarted()"
+        >
+          Get Started
+        </ion-button>
+        <ion-button
+          class="my-6"
+          size="large"
+          shape="round"
+          fill="clear"
+          (click)="scrollToPosition(aboutSection)"
+        >
+          Learn More
+        </ion-button>
+      </ion-col>
+    </ion-row>
+  </ion-grid>
+  <!-- slogan -->
+  <ion-grid #aboutSection class="slogan ion-no-padding ion-text-center">
+    <ion-row>
+      <ion-col class="ion-padding">
+        <ion-text class="text-gray-900 dark:text-gray-100 font-semibold">
+          When AI Agents work together, they can achieve great things
+        </ion-text>
+      </ion-col>
+    </ion-row>
+  </ion-grid>
+
+  <!-- About Section -->
+  <ion-grid fixed class="my-16">
+    <ion-row class="flex justify-center items-center">
+      <ion-col size="12" class="text-center">
+        <ion-text>
+          <h2 class="text-4xl font-bold">About Agent H</h2>
+          <p class="mt-4 text-lg text-gray-300">
+            Agent-H is an innovative autonomous agent framework that has evolved
+            from its origins as a lightweight, modular system for managing
+            multiple AI assistants. Initially conceived as the "little sister"
+            of <a href="https://github.com/elizaOS/eliza" target="_blank">ElizaOS</a>, Agent-H has grown into a sophisticated platform that combines advanced AI capabilities with blockchain technology.
+          </p>
+        </ion-text>
+      </ion-col>
+    </ion-row>
+    <ion-row class="flex justify-center items-center py-16 p-4">
+      <ion-col size="12" size-md="4">
+        <img
+          src="assets/img/agent-h-26.jpeg"
+          alt="About Image"
+          class="filterBrightnessContrast w-full rounded-2xl shadow-md my-16"
+        />
+      </ion-col>
+      <ion-col size="12" size-md="8" class="text-left my-8 md:pl-10">
+        <ion-text>
+          <h2 class="text-4xl font-bold">The Future of Asset Management</h2>
+          <p class="mt-4 text-lg text-gray-300">
+            The framework's journey began with a focus on simplicity and
+            extensibility, inspired by the groundwork laid by ElizaOS. Agent-H
+            was designed to be more accessible and scalable, offering developers
+            a user-friendly toolkit for creating and managing AI assistants. Its
+            modular architecture allowed for easy customization and expansion,
+            making it adaptable to various use cases.
+          </p>
+          <p class="mt-4 mb-6 text-lg text-gray-300">
+            As of January 2025, Agent-H has taken a significant leap forward in
+            its capabilities. The framework now incorporates an autonomous
+            instance that actively
+            <a
+              href="https://app.enzyme.finance/vault/0x20b199a2874440c652d9f18e5768d1a1ef76938d?network=arbitrum"
+              class="text-purple-400"
+              >manages a crypto fund on Enzyme Finance</a
+            >
+            and, revolutionizing the way individuals can participate in
+            decentralized finance (DeFi).
+          </p>
+          <p class="mt-4 mb-6 text-lg text-gray-300">
+            This groundbreaking feature allows anyone to interact with the AI by
+            depositing <b>$10</b>, democratizing access to sophisticated
+            financial strategies.
+          </p>
+        </ion-text>
+        <ion-button
+          class="mt-2 px-1"
+          size="large"
+          shape="round"
+          href="https://app.enzyme.finance/vault/0x20b199a2874440c652d9f18e5768d1a1ef76938d?network=arbitrum"
+          target="_blanck"
+        >
+          Invest with Agent-H
+          <ion-icon slot="end" name="arrow-forward"></ion-icon>
+        </ion-button>
+        <ion-button
+          class="mt-2 px-1"
+          size="large"
+          shape="round"
+          routerLink="/chat"
+          target="_blanck"
+        >
+          Chat with Agent-H
+          <ion-icon slot="end" name="arrow-forward"></ion-icon>
+        </ion-button>
+      </ion-col>
+    </ion-row>
+
+    <ion-row class="flex justify-center items-center py-16 p-4">
+      <ion-col size="12" size-md="8" class="text-left my-8 md:pr-10">
+        <ion-text>
+          <h2 class="text-4xl font-bold">
+            Bridging AI and Blockchain Technologies
+          </h2>
+          <p class="mt-4 text-lg text-gray-300">
+            The current iteration of Agent-H showcases its ability to perform
+            on-chain transactions independently, execute complex yield
+            strategies, and manage crypto assets without human intervention.
+            Leveraging its blockchain integration, the system continuously
+            analyzes market conditions, evaluates DeFi protocols, and makes
+            informed decisions about asset allocation and risk management.
+          </p>
+          <p class="mt-4 text-lg text-gray-300">
+            Agent-H's autonomous operation ensures 24/7 fund management,
+            capitalizing on market inefficiencies and opportunities that human
+            managers might overlook. Its capacity to handle on-chain
+            transactions seamlessly enables interactions with multiple DeFi
+            platforms, including token swaps, liquidity provision, and asset
+            staking.
+          </p>
+        </ion-text>
+        <ion-card class="mt-4 ml-0">
+          <ion-card-header>
+            <ion-card-subtitle>Current Wallet Worth</ion-card-subtitle>
+            <a
+              href="https://debank.com/profile/0x1399b9c0228D4430b5cA9e9CCC21D594CBb6447A"
+              target="_blank"
+              *ngIf="totalWalletWorth >= 0"
+            >
+              <ion-card-title>
+                {{ totalWalletWorth | currency: 'USD' : 'symbol' : '1.2-2' }}
+                <ion-icon
+                  size="small"
+                  name="open-outline" />
+              </ion-card-title>
+            </a>
+            <ion-card-title *ngIf="totalWalletWorth < 0">
+              $<ion-skeleton-text
+                animated
+                style="margin-left: 0.025rem; width: 180px; display: inline-block;"
+              ></ion-skeleton-text>
+            </ion-card-title>
+          </ion-card-header>
+          <ion-card-content>
+            <ion-text>
+              <p class="text-lg text-gray-300">
+                0x1399b9c0228D4430b5cA9e9CCC21D594CBb6447A
+              </p>
+            </ion-text>
+          </ion-card-content>
+        </ion-card>
+      </ion-col>
+      <ion-col size="12" size-md="4">
+        <img
+          src="assets/img/agent-h-18.jpeg"
+          alt="About Image"
+          class="filterBrightnessContrast w-full rounded-2xl shadow-md my-16"
+        />
+      </ion-col>
+    </ion-row>
+  </ion-grid>
+
+  <!-- Features -->
+  <ion-grid fixed class="text-gray-900 dark:text-gray-100">
+    <ion-row class="flex justify-center items-center">
+      <ion-col size="12" class="text-center mt-16 mb-10">
+        <ion-text>
+          <h2 class="text-4xl font-bold">✨ Features ✨</h2>
+          <p class="mt-4 text-lg text-gray-300">
+            Agent-H Framework offers a wide range of features that make it a
+            powerful tool for developper that want to build and managing AI
+            agents that can interacting with blockchain networks.
+          </p>
+        </ion-text>
+      </ion-col>
+    </ion-row>
+    <ion-row>
+      <ion-col size-xs="12" size-md="4">
+        <ion-card>
+          <ion-card-header>
+            <ion-card-title>🤖 IA Assistant Manager</ion-card-title>
+          </ion-card-header>
+          <ion-card-content>
+            Orchestrate and manage multiple AI agents efficiently.
+          </ion-card-content>
+        </ion-card>
+      </ion-col>
+      <ion-col size-xs="12" size-md="4">
+        <ion-card>
+          <ion-card-header>
+            <ion-card-title>🛠️ Highly Extensible</ion-card-title>
+          </ion-card-header>
+          <ion-card-content>
+            Create your own tools and agents assistant with ease.
+          </ion-card-content>
+        </ion-card>
+      </ion-col>
+      <ion-col size-xs="12" size-md="4">
+        <ion-card>
+          <ion-card-header>
+            <ion-card-title>🔗 Onchain Interactions</ion-card-title>
+          </ion-card-header>
+          <ion-card-content>
+            Provide default tools for EVM Blockchain interactions.
+          </ion-card-content>
+        </ion-card>
+      </ion-col>
+    </ion-row>
+    <ion-row>
+      <ion-col size-xs="12" size-md="4">
+        <ion-card>
+          <ion-card-header>
+            <ion-card-title>🔒 Secure and Private API Server</ion-card-title>
+          </ion-card-header>
+          <ion-card-content>
+            Include a NestJS server that exposes Agent to HTTP Requests.
+          </ion-card-content>
+        </ion-card>
+      </ion-col>
+      <ion-col size-xs="12" size-md="4">
+        <ion-card>
+          <ion-card-header>
+            <ion-card-title>📚 Easily Configure & Run</ion-card-title>
+          </ion-card-header>
+          <ion-card-content>
+            Only one programming language framework & configuration based on yml
+            file.
+          </ion-card-content>
+        </ion-card>
+      </ion-col>
+      <ion-col size-xs="12" size-md="4">
+        <ion-card>
+          <ion-card-header>
+            <ion-card-title>🚀 Ready to Use and Deploy</ion-card-title>
+          </ion-card-header>
+          <ion-card-content>
+            Setup & deploy in less than 5 minutes.
+          </ion-card-content>
+        </ion-card>
+      </ion-col>
+    </ion-row>
+    <ion-row class="flex justify-center items-center">
+      <ion-col size="12" class="text-center mt-16 mb-16 p-4">
+        <img
+          src="assets/img/agent-h-17.jpeg"
+          alt="Features Image"
+          class="filterBrightnessContrast w-full rounded-2xl shadow-md my-16"
+        />
+        <ion-text>
+          <ion-button
+            class="mt-2 px-2"
+            size="large"
+            shape="round"
+            href="https://github.com/hexaonelabs/ia-agent-h/"
+            target="_blank"
+          >
+            Github
+            <ion-icon slot="end" name="logo-github"></ion-icon>
+          </ion-button>
+          <ion-button
+            class="mt-2 px-2"
+            size="large"
+            shape="round"
+            href="https://x.com/ia_agent_h"
+            target="_blank"
+          >
+            Follow on
+            <ion-icon slot="end" name="logo-x"></ion-icon>
+          </ion-button>
+        </ion-text>
+      </ion-col>
+    </ion-row>
+  </ion-grid>
+
+  <!-- Footer -->
+  <ion-grid class="footer ion-padding">
+    <ion-row class="flex justify-center items-center">
+      <ion-col size="12" class="text-center">
+        <ion-text>
+          <p>
+            2025 Agent H. Build with ❤️ by
+            <a href="https://hexaonelabs.com" target="_blank">HexaOne Labs</a>
+          </p>
+        </ion-text>
+      </ion-col>
+    </ion-row>
+  </ion-grid>
+</ion-content>
