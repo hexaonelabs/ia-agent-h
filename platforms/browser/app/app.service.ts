@@ -221,7 +221,10 @@ export class AppService {
       message: 'Connect to Agent-H',
     };
     const request = this._http.post<{ access_token: string }>(url, body);
-    const response = await firstValueFrom(request);
+    const response = await firstValueFrom(request).catch(async (error) => {
+      await this.disconnectWallet();
+      throw error;
+    });
     // store
     localStorage.setItem('token', response.access_token);
     return response;
@@ -247,7 +250,7 @@ export class AppService {
       this.signature$.next(result);
       loader.dismiss();
     } catch (error) {
-      this.signature$.next(undefined);
+      await this.disconnectWallet();
       loader.dismiss();
       throw error;
     }
