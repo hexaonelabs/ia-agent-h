@@ -26,3 +26,10 @@ Args:
     Type: array
     Items:
       Type: object 
+
+  - Name: chainId
+    Description: The network chain ID to read the contract on
+    Required: true
+    Type: number
+    Pattern: ^[0-9]+$
+    Default: 11155111

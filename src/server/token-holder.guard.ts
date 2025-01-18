@@ -1,6 +1,7 @@
 import { Injectable, CanActivate, ExecutionContext } from '@nestjs/common';
 import { JwtService } from '@nestjs/jwt';
-import { getERC20TokenBalance } from 'src/tools/getTokenERC20Balance';
+import { getTokenBalance } from 'src/tools/getTokenBalance';
+import { arbitrum } from 'viem/chains';
 
 @Injectable()
 export class TokenHolderGuard implements CanActivate {
@@ -17,10 +18,10 @@ export class TokenHolderGuard implements CanActivate {
       return true;
     }
     try {
-      const result = await getERC20TokenBalance({
+      const result = await getTokenBalance({
         walletAddress: address as `0x${string}`,
         tokenAddress: process.env.ENZYME_FUND_ADDRESS as `0x${string}`,
-        network: 'arbitrum',
+        chainId: arbitrum.id,
       });
       return Number(result) > 10 ? true : false;
     } catch {

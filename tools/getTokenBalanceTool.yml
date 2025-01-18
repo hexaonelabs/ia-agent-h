@@ -1,5 +1,5 @@
 Name: get_token_balance
-Description: Get the balance of a specific token for a wallet on a specified network
+Description: Get the balance of a ERC20 token (non native token) for a wallet on a specified network
 Handler: tools/getTokenBalance
 Args: 
   - Name: wallet
@@ -14,9 +14,9 @@ Args:
     Type: string
     Pattern: ^0x[a-fA-F0-9]{40}$
 
-  - Name: network
-    Description: The network to get the token balance on
+  - Name: chainId
+    Description: The network chain ID to get the token balance on
     Required: true
-    Type: string
-    Pattern: ^[a-zA-Z0-9]+$
-    Default: sepolia
+    Type: number
+    Pattern: ^[0-9]+$
+    Default: 11155111
