@@ -113,6 +113,12 @@ Tools:
 
   - Name: get_transaction_receipt
     type: read
+  
+  - Name: get_time_difference
+    type: read
+  
+  - Name: plan_execution
+    type: write
 
   # - Name: read_contract
   #   type: read

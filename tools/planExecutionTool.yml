@@ -1,0 +1,15 @@
+Name: plan_execution
+Description: Plan the execution of a prompt at a specific time
+Handler: tools/planExecution
+Args: 
+  - Name: timestamp
+    Description: The timestamp of the execution
+    Required: true
+    Type: number
+    Pattern: ^[0-9]{10}$
+
+  - Name: prompt
+    Description: The prompt to execute
+    Required: true
+    Type: string
+    Pattern: ^[a-zA-Z0-9]$

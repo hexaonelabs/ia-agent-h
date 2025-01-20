@@ -13,7 +13,9 @@ import {
   getAssistantPrompt,
 } from '../utils';
 import { CustomLogger } from '../logger.service';
-import { SendPromptDto } from 'src/server/dto/send-prompt.dto';
+import { SendPromptDto } from '../server/dto/send-prompt.dto';
+import * as fs from 'fs';
+import { join } from 'path';
 
 @Injectable()
 export class AgentService {
@@ -63,34 +65,64 @@ export class AgentService {
 
   async sendMessage(params: SendPromptDto) {
     const { threadId, userInput } = params;
-    // find the thread by id or create a new one
     const thread = !threadId
       ? await this.createThread()
       : this.threads.find((thread) => thread.id === threadId);
-    if (!thread) {
-      throw new Error('Thread not found');
-    }
+    if (!thread) throw new Error('Thread not found');
+
     try {
-      // Add the user's message to the thread
       await this._client.beta.threads.messages.create(thread.id, {
         role: 'user',
         content: userInput,
       });
-      // Create and perform the run
       const run = await this._createRun(thread);
       const result = await this._performRun(run, thread);
+
+      //check if the assistant has scheduled a task
+      const assistantMessage = result?.content;
+      const toolCalls = result?.toolCalls;
+
+      if (toolCalls && toolCalls.length > 0) {
+        const planExecutionCall = toolCalls.find(
+          (call) => call.function.name === 'plan_execution',
+        );
+
+        if (planExecutionCall) {
+          // extract the timestamp and prompt from the tool call arguments
+          const { timestamp, prompt } = JSON.parse(
+            planExecutionCall.function.arguments,
+          );
+          // log the scheduled task
+          this._logger.log(`Task scheduled for ${timestamp}: ${prompt}`);
+          // Save the scheduled task in the file
+          const task = `${timestamp}: ${prompt}`;
+          const filesPath = join(
+            process.cwd(),
+            'public',
+            'logs',
+            'scheduled-tasks.txt',
+          );
+          if (!fs.existsSync(filesPath)) {
+            fs.writeFileSync(filesPath, '');
+          }
+          fs.appendFileSync(filesPath, `${task}\n`);
+          return {
+            threadId: thread.id,
+            message: 'Tâche planifiée avec succès',
+          };
+        }
+      }
+
       const response =
-        result?.type === 'text' ? result.text.value : 'No text response';
-      // Add the response to the in-memory store
+        assistantMessage?.type === 'text'
+          ? assistantMessage.text.value
+          : 'No text response';
+
       if (!this.inMemoryThreadsMesssages[thread.id]) {
         this.inMemoryThreadsMesssages[thread.id] = [];
       }
-      this.inMemoryThreadsMesssages[thread.id].push(userInput);
-      // finally return the response
-      return {
-        threadId: thread.id,
-        message: await parse(response),
-      };
+      this.inMemoryThreadsMesssages[thread.id].push(...[userInput, response]);
+      return { threadId: thread.id, message: await parse(response) };
     } catch (error) {
       const message = `Error during chat: ${error instanceof Error ? error.message : 'Unknown error'}`;
       throw new Error(message);
@@ -166,7 +198,13 @@ export class AgentService {
     return run;
   }
 
-  private async _performRun(run: Run, thread: Thread) {
+  private async _performRun(
+    run: Run,
+    thread: Thread,
+  ): Promise<{
+    toolCalls?: OpenAI.Beta.Threads.Runs.RequiredActionFunctionToolCall[];
+    content: OpenAI.Beta.Threads.Messages.MessageContent;
+  }> {
     this._logger.log(`🚀 Performing run ${run.id}`);
     // execute action to call if status is requires_action
     while (run.status === 'requires_action') {
@@ -187,10 +225,12 @@ export class AgentService {
         content: value,
       });
       return {
-        type: 'text',
-        text: {
-          value,
-          annotations: [],
+        content: {
+          type: 'text',
+          text: {
+            value,
+            annotations: [],
+          },
         },
       };
     }
@@ -199,16 +239,18 @@ export class AgentService {
     const assistantMessage = messages.data.find(
       (message) => message.role === 'assistant',
     );
+    const toolCalls = run.required_action?.submit_tool_outputs
+      ?.tool_calls as OpenAI.Beta.Threads.Runs.RequiredActionFunctionToolCall[];
     this._logger.log(
-      `🚀 Assistant message: ${JSON.stringify(assistantMessage?.content[0])}`,
+      `🚀 Assistant message: ${JSON.stringify(assistantMessage?.content)}`,
     );
-    // return response or default message
-    return (
-      assistantMessage?.content[0] || {
-        type: 'text',
-        text: { value: 'No response from assistant', annotations: [] },
-      }
-    );
+    return {
+      toolCalls,
+      content: (assistantMessage?.content?.[0] as any) || {
+        text: 'text',
+        value: 'No response from assistant',
+      },
+    };
   }
 
   private async _handleRunToolCalls(run: Run, thread: Thread): Promise<Run> {
