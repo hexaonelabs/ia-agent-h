@@ -10,6 +10,7 @@ async function bootstrapServer() {
   const app = await NestFactory.create<NestExpressApplication>(AppModule, {
     logger: new CustomLogger(AppModule.name),
   });
+  app.enableShutdownHooks();
   // enable cors
   app.enableCors();
   // enable validation

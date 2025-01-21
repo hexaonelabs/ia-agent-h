@@ -1,4 +1,12 @@
-import { Body, Controller, Get, Post, Res, UseGuards } from '@nestjs/common';
+import {
+  Body,
+  Controller,
+  Get,
+  Post,
+  Res,
+  Sse,
+  UseGuards,
+} from '@nestjs/common';
 import { AppService } from './app.service';
 import { AgentService } from '../agents/agent.service';
 import * as fs from 'fs';
@@ -14,6 +22,8 @@ import { SendPromptDto } from './dto/send-prompt.dto';
 import { PromptAPIResponse } from './entities/prompt-api-response.entity';
 import { EvmAuthGuard } from './evm-auth.guard';
 import { TokenHolderGuard } from './token-holder.guard';
+import { SseSubjectService } from './sse-subject.service';
+import { Observable } from 'rxjs';
 
 // @ApiBearerAuth()
 @ApiTags('Agent-H')
@@ -22,6 +32,7 @@ export class AppController {
   constructor(
     private readonly _appService: AppService,
     private readonly _agentService: AgentService,
+    private readonly _sseSubjectService: SseSubjectService,
   ) {}
 
   @ApiExcludeEndpoint()
@@ -85,6 +96,11 @@ export class AppController {
         success: false,
       }));
     return response;
+  }
+
+  @Sse('/sse')
+  sse(): Observable<MessageEvent> {
+    return this._sseSubjectService.getSubject$();
   }
 
   @UseGuards(EvmAuthGuard)

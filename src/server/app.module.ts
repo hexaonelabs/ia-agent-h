@@ -7,6 +7,8 @@ import { CustomLogger } from '../logger.service';
 import { JwtModule } from '@nestjs/jwt';
 import { ServeStaticModule } from '@nestjs/serve-static';
 import { join } from 'node:path';
+import { TaskSchedulerService } from 'src/server/task-scheduler.service';
+import { SseSubjectService } from './sse-subject.service';
 
 @Module({
   imports: [
@@ -21,7 +23,13 @@ import { join } from 'node:path';
     }),
   ],
   controllers: [AppController],
-  providers: [AppService, AgentService, CustomLogger],
+  providers: [
+    AppService,
+    AgentService,
+    TaskSchedulerService,
+    SseSubjectService,
+    CustomLogger,
+  ],
 })
 export class AppModule {
   constructor(private readonly _logger: CustomLogger) {

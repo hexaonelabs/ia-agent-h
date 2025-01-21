@@ -1,10 +1,10 @@
-export const getTimeDifference = (args: {
-  diff_hours: number;
-  diff_minutes: number;
-  diff_seconds: number;
-}): string => {
-  const { diff_hours, diff_minutes, diff_seconds } = args;
+export const getTimeDifference = async (args: {
+  diffHours: number;
+  diffMinutes: number;
+  diffSeconds: number;
+}): Promise<string> => {
+  const { diffHours = 0, diffMinutes = 0, diffSeconds = 0 } = args;
   const now = Math.floor(Date.now() / 1000); // Time in seconds
-  const futureTime = now + diff_hours * 3600 + diff_minutes * 60 + diff_seconds;
+  const futureTime = now + diffHours * 3600 + diffMinutes * 60 + diffSeconds;
   return futureTime.toString();
 };

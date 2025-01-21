@@ -16,6 +16,7 @@ import { CustomLogger } from '../logger.service';
 import { SendPromptDto } from '../server/dto/send-prompt.dto';
 import * as fs from 'fs';
 import { join } from 'path';
+import { TaskSchedulerService } from '../server/task-scheduler.service';
 
 @Injectable()
 export class AgentService {
@@ -37,7 +38,8 @@ export class AgentService {
   public readonly threads: Thread[] = [];
   private readonly inMemoryThreadsMesssages: Record<string, string[]> = {};
   private readonly _logger = new CustomLogger(AgentService.name);
-  constructor() {
+  constructor(private _taskSchedulerService: TaskSchedulerService) {
+    this._taskSchedulerService.setExecuter(this.sendMessage.bind(this));
     this._client = new OpenAI();
     this._createAssistant(this._client, 'agent-h')
       .then(async ({ assistant, tools }) => {
@@ -288,9 +290,16 @@ export class AgentService {
       this._logger.log(
         `💾 Assistant "${agent.assistant.name}" executing: ${tool.function.name}...`,
       );
+      console.log('>>>>', ToolConfig);
+
       const args = JSON.parse(tool.function.arguments);
       // handle error OR response to send to the assistant
-      const output = await ToolConfig.handler(args).catch((error) => {
+      const output = await ToolConfig.handler(
+        args,
+        tool.function.name === 'plan_execution'
+          ? this._taskSchedulerService
+          : undefined,
+      ).catch((error) => {
         const message =
           error?.message ||
           error ||
