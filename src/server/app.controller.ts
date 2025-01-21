@@ -17,6 +17,8 @@ import {
   ApiExcludeEndpoint,
   ApiOperation,
   ApiResponse,
+  ApiBearerAuth,
+  ApiBody,
 } from '@nestjs/swagger';
 import { SendPromptDto } from './dto/send-prompt.dto';
 import { PromptAPIResponse } from './entities/prompt-api-response.entity';
@@ -25,7 +27,6 @@ import { TokenHolderGuard } from './token-holder.guard';
 import { SseSubjectService } from './sse-subject.service';
 import { Observable } from 'rxjs';
 
-// @ApiBearerAuth()
 @ApiTags('Agent-H')
 @Controller()
 export class AppController {
@@ -63,15 +64,17 @@ export class AppController {
     );
   }
 
-  @UseGuards(EvmAuthGuard)
-  @UseGuards(TokenHolderGuard)
+  @ApiBearerAuth()
   @ApiOperation({ summary: `Send a prompt to ia agent manager` })
+  @ApiBody({ type: SendPromptDto })
   @ApiResponse({
     status: 200,
     description: 'The prompt was sent successfully',
     type: PromptAPIResponse,
   })
   @ApiResponse({ status: 403, description: 'Forbidden.' })
+  @UseGuards(EvmAuthGuard)
+  @UseGuards(TokenHolderGuard)
   @Post('/prompt')
   async chat(@Body() body: SendPromptDto): Promise<{
     data: {
@@ -98,6 +101,11 @@ export class AppController {
     return response;
   }
 
+  /**
+   * Message event from server using SSE.
+   * @return an observable that emit message to the client
+   */
+  @ApiExcludeEndpoint()
   @UseGuards(EvmAuthGuard)
   @UseGuards(TokenHolderGuard)
   @Sse('/sse')
@@ -105,6 +113,7 @@ export class AppController {
     return this._sseSubjectService.getSubject$();
   }
 
+  @ApiBearerAuth()
   @UseGuards(EvmAuthGuard)
   @UseGuards(TokenHolderGuard)
   @Get('/logs')
