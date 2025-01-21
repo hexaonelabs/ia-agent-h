@@ -5,10 +5,15 @@ interface PlanExecutionArgs {
 export const planExecution = async (
   args: PlanExecutionArgs,
   taskScheduler: {
-    addTask: (timestamp: number, prompt: string) => Promise<void>;
+    addTask: (
+      timestamp: number,
+      prompt: string,
+      userAddress: string,
+    ) => Promise<void>;
   },
+  userAddress: string,
 ) => {
   const { timestamp, prompt } = args;
-  await taskScheduler.addTask(timestamp, prompt);
+  await taskScheduler.addTask(timestamp, prompt, userAddress);
   return 'Planned';
 };

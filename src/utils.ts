@@ -22,6 +22,7 @@ export interface ToolConfig<T = any> {
   handler: (
     args: T,
     taskSchedulerService?: TaskSchedulerService,
+    userAddress?: string,
   ) => Promise<any>;
 }
 

@@ -6,10 +6,17 @@ import { v4 as uuid } from 'uuid';
 
 @Injectable()
 export class TaskSchedulerService {
-  private tasks: { timestamp: number; prompt: string; processId?: string }[] =
-    [];
+  private tasks: {
+    timestamp: number;
+    prompt: string;
+    userAddress: string;
+    processId?: string;
+  }[] = [];
   private readonly _logger = new CustomLogger(TaskSchedulerService.name);
-  private _sendPromptFn: (params: SendPromptDto) => Promise<{
+  private _sendPromptFn: (
+    params: SendPromptDto,
+    userAddress: string,
+  ) => Promise<{
     threadId: string;
     message: string;
   }>;
@@ -18,6 +25,7 @@ export class TaskSchedulerService {
   setExecuter(
     fn: (
       params: SendPromptDto,
+      userAddress: string,
     ) => Promise<{ threadId: string; message: string }>,
   ) {
     this._sendPromptFn = fn;
@@ -31,8 +39,8 @@ export class TaskSchedulerService {
     );
   }
 
-  addTask(timestamp: number, prompt: string) {
-    this.tasks.push({ timestamp, prompt });
+  addTask(timestamp: number, prompt: string, userAddress: string) {
+    this.tasks.push({ timestamp, prompt, userAddress });
     this._logger.log(`🕒 Planned task: ${timestamp}: ${prompt}`);
   }
 
@@ -44,18 +52,21 @@ export class TaskSchedulerService {
         // add processId to prevent multiple execution
         task.processId = uuid();
         // execute task
-        const result = await this._sendPromptFn({
-          userInput: task.prompt,
-        });
-        // remove task from queue
-        this.tasks.splice(index, 1);
+        const result = await this._sendPromptFn(
+          {
+            userInput: task.prompt,
+          },
+          task.userAddress,
+        );
         // dispatch result to SSE
-        this._sseSubjectService.sendEvent({
+        this._sseSubjectService.sendEventToUser(task.userAddress, {
           data: { chat: result },
         } as MessageEvent);
         this._logger.log(
-          `✅ Scheduled task executed with success: ${task.prompt}`,
+          `✅ Scheduled task of user ${task.userAddress} executed with success: ${task.prompt}`,
         );
+        // remove task from queue
+        this.tasks.splice(index, 1);
       }
     });
   }

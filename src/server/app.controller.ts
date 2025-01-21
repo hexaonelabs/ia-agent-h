@@ -3,6 +3,7 @@ import {
   Controller,
   Get,
   Post,
+  Req,
   Res,
   Sse,
   UseGuards,
@@ -11,7 +12,7 @@ import { AppService } from './app.service';
 import { AgentService } from '../agents/agent.service';
 import * as fs from 'fs';
 import * as p from 'path';
-import { Response } from 'express';
+import { Response, Request } from 'express';
 import {
   ApiTags,
   ApiExcludeEndpoint,
@@ -76,20 +77,24 @@ export class AppController {
   @UseGuards(EvmAuthGuard)
   @UseGuards(TokenHolderGuard)
   @Post('/prompt')
-  async chat(@Body() body: SendPromptDto): Promise<{
+  async chat(@Req() request: Request): Promise<{
     data: {
       threadId: string;
       message: string;
     };
     success: boolean;
   }> {
+    const body = request.body;
     let threadId = body.threadId;
     if (!threadId) {
       const thread = await this._agentService.createThread();
       threadId = thread.id;
     }
+    const userAddress = request['user'].address;
+    console.log('chat', userAddress);
+
     const response = await this._agentService
-      .sendMessage({ ...body, threadId })
+      .sendMessage({ ...body, threadId }, userAddress)
       .then((data) => ({ data, success: true }))
       .catch((error) => ({
         data: {
@@ -109,8 +114,11 @@ export class AppController {
   @UseGuards(EvmAuthGuard)
   @UseGuards(TokenHolderGuard)
   @Sse('/sse')
-  sse(): Observable<MessageEvent> {
-    return this._sseSubjectService.getSubject$();
+  sse(@Req() request: Request): Observable<MessageEvent> {
+    const usserAddress = request['user'].address;
+    console.log('sse', usserAddress);
+
+    return this._sseSubjectService.getUserSubject$(usserAddress);
   }
 
   @ApiBearerAuth()

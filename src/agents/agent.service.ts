@@ -65,7 +65,7 @@ export class AgentService {
     }
   }
 
-  async sendMessage(params: SendPromptDto) {
+  async sendMessage(params: SendPromptDto, userAddress: string) {
     const { threadId, userInput } = params;
     const thread = !threadId
       ? await this.createThread()
@@ -78,7 +78,7 @@ export class AgentService {
         content: userInput,
       });
       const run = await this._createRun(thread);
-      const result = await this._performRun(run, thread);
+      const result = await this._performRun(run, thread, userAddress);
 
       //check if the assistant has scheduled a task
       const assistantMessage = result?.content;
@@ -203,6 +203,7 @@ export class AgentService {
   private async _performRun(
     run: Run,
     thread: Thread,
+    userAddress: string,
   ): Promise<{
     toolCalls?: OpenAI.Beta.Threads.Runs.RequiredActionFunctionToolCall[];
     content: OpenAI.Beta.Threads.Messages.MessageContent;
@@ -210,7 +211,7 @@ export class AgentService {
     this._logger.log(`🚀 Performing run ${run.id}`);
     // execute action to call if status is requires_action
     while (run.status === 'requires_action') {
-      run = await this._handleRunToolCalls(run, thread);
+      run = await this._handleRunToolCalls(run, thread, userAddress);
     }
     // manage error if status is failed
     if (run.status === 'failed') {
@@ -255,7 +256,11 @@ export class AgentService {
     };
   }
 
-  private async _handleRunToolCalls(run: Run, thread: Thread): Promise<Run> {
+  private async _handleRunToolCalls(
+    run: Run,
+    thread: Thread,
+    userAddress: string,
+  ): Promise<Run> {
     this._logger.log(`💾 Handling tool calls for run ${run.id}`);
 
     const toolCalls = run.required_action?.submit_tool_outputs?.tool_calls;
@@ -291,12 +296,13 @@ export class AgentService {
         `💾 Assistant "${agent.assistant.name}" executing: ${tool.function.name}...`,
       );
       const args = JSON.parse(tool.function.arguments);
-      // handle error OR response to send to the assistant
+      // call the tool handler function & handle errors with catch()
       const output = await ToolConfig.handler(
         args,
         tool.function.name === 'plan_execution'
           ? this._taskSchedulerService
           : undefined,
+        tool.function.name === 'plan_execution' ? userAddress : undefined,
       ).catch((error) => {
         const message =
           error?.message ||
