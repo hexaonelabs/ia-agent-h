@@ -7,7 +7,8 @@ export class EvmAuthGuard implements CanActivate {
 
   canActivate(context: ExecutionContext): boolean {
     const request = context.switchToHttp().getRequest();
-    const token = this.extractTokenFromHeader(request);
+    const token =
+      this.extractTokenFromHeader(request) || this.extractTokenFromUrl(request);
     if (!token) {
       return false;
     }
@@ -23,5 +24,9 @@ export class EvmAuthGuard implements CanActivate {
   private extractTokenFromHeader(request: any): string | undefined {
     const [type, token] = request.headers.authorization?.split(' ') ?? [];
     return type === 'Bearer' ? token : undefined;
+  }
+
+  private extractTokenFromUrl(request: any): string | undefined {
+    return request.query.token;
   }
 }
