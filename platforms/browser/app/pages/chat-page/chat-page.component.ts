@@ -90,24 +90,11 @@ export class ChatPageComponent implements AfterViewInit, OnDestroy {
     private readonly _sseService: SseService,
     private readonly _modalCtrl: ModalController,
   ) {
-    const sub = this._sseService
-      .createEventSource()
-      .pipe(
-        map(({ chat }) => chat),
-        filter((chat) => !!chat),
-      )
-      .subscribe((data) => {
-        this.messages.push({
-          text: data.message,
-          type: 'assistant',
-        });
-        this.scrollToBottom();
-      });
-    this._subscriptions.push(sub);
     this.userAccount$ = this._appService.account$.pipe(
       tap(async (account) => {
         const existingModal = await this._modalCtrl.getTop();
         if (!account && !existingModal) {
+          this.ngOnDestroy();
           const modal = await this._modalCtrl.create({
             component: ConnectUserModalComponent,
             backdropDismiss: false,
@@ -125,6 +112,21 @@ export class ChatPageComponent implements AfterViewInit, OnDestroy {
               type: 'assistant',
             });
           }
+          // connect SSE
+          const sub = this._sseService
+            .createEventSource()
+            .pipe(
+              map(({ chat }) => chat),
+              filter((chat) => !!chat),
+            )
+            .subscribe((data) => {
+              this.messages.push({
+                text: data.message,
+                type: 'assistant',
+              });
+              this.scrollToBottom();
+            });
+          this._subscriptions.push(sub);
         }
       }),
     );

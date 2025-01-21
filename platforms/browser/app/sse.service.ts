@@ -20,7 +20,10 @@ export class SseService {
     if (this._eventSource) {
       this._eventSource.close();
     }
-    this._eventSource = new EventSource(environment.apiEndpoint + '/sse');
+    const token = localStorage.getItem('token');
+    this._eventSource = new EventSource(
+      environment.apiEndpoint + '/sse?token=' + token,
+    );
     return new Observable((observer) => {
       if (!this._eventSource) {
         throw new Error('EventSource is not initialized');
