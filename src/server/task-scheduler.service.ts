@@ -2,10 +2,12 @@ import { Injectable } from '@nestjs/common';
 import { CustomLogger } from '../logger.service';
 import { SendPromptDto } from '../server/dto/send-prompt.dto';
 import { SseSubjectService } from './sse-subject.service';
+import { v4 as uuid } from 'uuid';
 
 @Injectable()
 export class TaskSchedulerService {
-  private tasks: { timestamp: number; prompt: string }[] = [];
+  private tasks: { timestamp: number; prompt: string; processId?: string }[] =
+    [];
   private readonly _logger = new CustomLogger(TaskSchedulerService.name);
   private _sendPromptFn: (params: SendPromptDto) => Promise<{
     threadId: string;
@@ -37,17 +39,20 @@ export class TaskSchedulerService {
   private _runTasks() {
     const now = Math.floor(Date.now() / 1000); // Timestamp actuel en secondes
     this.tasks.forEach(async (task, index) => {
-      if (task.timestamp <= now) {
+      if (task.timestamp <= now && !task.processId) {
         this._logger.log(`🚀 Task Execution: ${task.prompt}`);
+        // add processId to prevent multiple execution
+        task.processId = uuid();
+        // execute task
         const result = await this._sendPromptFn({
           userInput: task.prompt,
         });
+        // remove task from queue
+        this.tasks.splice(index, 1);
         // dispatch result to SSE
         this._sseSubjectService.sendEvent({
           data: { chat: result },
         } as MessageEvent);
-        // Remove task from queue
-        this.tasks.splice(index, 1);
         this._logger.log(
           `✅ Scheduled task executed with success: ${task.prompt}`,
         );

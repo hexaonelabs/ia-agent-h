@@ -290,8 +290,6 @@ export class AgentService {
       this._logger.log(
         `💾 Assistant "${agent.assistant.name}" executing: ${tool.function.name}...`,
       );
-      console.log('>>>>', ToolConfig);
-
       const args = JSON.parse(tool.function.arguments);
       // handle error OR response to send to the assistant
       const output = await ToolConfig.handler(
