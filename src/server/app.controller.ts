@@ -98,6 +98,8 @@ export class AppController {
     return response;
   }
 
+  @UseGuards(EvmAuthGuard)
+  @UseGuards(TokenHolderGuard)
   @Sse('/sse')
   sse(): Observable<MessageEvent> {
     return this._sseSubjectService.getSubject$();
