@@ -199,6 +199,6 @@ const foramtDate = (value: string) => {
   return new Date(`${year}-${month}-${day}T${hours}:${minutes}:${seconds}`);
 };
 
-const removeLastBreakLine = (str: string) => {
-  return str.replace(/\r$/, '');
+const removeLastBreakLine = (str?: string) => {
+  return str?.replace(/\r$/, '');
 };
