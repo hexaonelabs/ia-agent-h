@@ -22,6 +22,7 @@ export const getGoogleEvents = async (args: GetGoogleEventsArgs) => {
   if ((process.env.ICAL_SECRET_URL?.length || 0) > 0) {
     const events = await getGoogleCalendarEventsFromIcal(
       process.env.ICAL_SECRET_URL,
+      args.startDate,
     );
     return events;
   }
@@ -128,13 +129,13 @@ async function listEvents(
  * @param url
  * @returns
  */
-async function getGoogleCalendarEventsFromIcal(url: string) {
+async function getGoogleCalendarEventsFromIcal(url: string, startDate: Date) {
   try {
     const response = await fetch(url);
     const icalData = await response.text();
     const jcalData = parseIcalAsJsonArray(icalData);
     const events = normaizeIcalData(jcalData);
-    return events;
+    return events.filter((event) => new Date(event.start) >= startDate);
   } catch (error) {
     console.error('Erreur lors de la récupération des événements iCal:', error);
     throw error;
