@@ -91,8 +91,6 @@ export class AppController {
       threadId = thread.id;
     }
     const userAddress = request['user'].address;
-    console.log('chat', userAddress);
-
     const response = await this._agentService
       .sendMessage({ ...body, threadId }, userAddress)
       .then((data) => ({ data, success: true }))
@@ -116,8 +114,6 @@ export class AppController {
   @Sse('/sse')
   sse(@Req() request: Request): Observable<MessageEvent> {
     const usserAddress = request['user'].address;
-    console.log('sse', usserAddress);
-
     return this._sseSubjectService.getUserSubject$(usserAddress);
   }
 
