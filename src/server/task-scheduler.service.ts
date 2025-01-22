@@ -93,10 +93,15 @@ export class TaskSchedulerService {
       startDate: new Date(),
       endDate: new Date(Date.now() + 1000 * 60 * 60 * 24),
     });
+    // exclude event that already added in queue
+    const eventsToExclude = this.tasks.map((task) => task.id);
+    const eventsList = events.filter(
+      (event) => !eventsToExclude.includes(event.created),
+    );
     // calculate timestamp events
-    events.forEach(async (event) => {
+    eventsList.forEach(async (event) => {
       this.addTask(
-        Date.parse(event.start) / 1000,
+        Date.parse(event.start as string) / 1000,
         `${event.summary} - ${event.description || ''}`,
         '0x0',
         event.created,
