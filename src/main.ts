@@ -36,11 +36,12 @@ async function bootstrapServer() {
 function run() {
   console.log(`Run srcipt...`);
   const port = process.env['PORT'] || 3000;
+  const host = process.env['HOST'] || 'localhost';
   // Start up the Node server
   bootstrapServer().then((server) => {
-    server.listen(port, () => {
+    server.listen(port, host, async () => {
       new CustomLogger('NestApplication').log(
-        `Node Express server listening on http://localhost:${port}`,
+        `Node Express server listening on this url ${await server.getUrl()}`,
       );
     });
   });
