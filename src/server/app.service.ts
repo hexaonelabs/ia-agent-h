@@ -43,9 +43,7 @@ export class AppService {
   async getAgentsAndToolsConfig() {
     const files = getAllAssistantsFileName();
     const agentsConfig = files.map((file) => {
-      const { Name, Description, Tools } = getAssistantConfig(file);
-      console.log({ Name, Description, Tools });
-      return { Name, Description, Tools };
+      return getAssistantConfig(file);
     });
     const toolsAvailable = getAllTools();
     return { agentsConfig, toolsAvailable };

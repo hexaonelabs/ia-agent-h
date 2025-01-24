@@ -322,3 +322,7 @@ export const getNetworkByName = (network: string) => {
       return sepolia;
   }
 };
+
+export const convertJSONToYAML = (json: any) => {
+  return yaml.dump(json);
+};

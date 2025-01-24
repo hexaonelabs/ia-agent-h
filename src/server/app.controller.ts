@@ -1,6 +1,7 @@
 import {
   Body,
   Controller,
+  ForbiddenException,
   Get,
   Post,
   Req,
@@ -27,6 +28,8 @@ import { EvmAuthGuard } from './evm-auth.guard';
 import { TokenHolderGuard } from './token-holder.guard';
 import { SseSubjectService } from './sse-subject.service';
 import { Observable } from 'rxjs';
+import { exec } from 'child_process';
+import { convertJSONToYAML } from 'src/utils';
 
 @ApiTags('Agent-H')
 @Controller()
@@ -143,10 +146,118 @@ export class AppController {
     }
   }
 
-  @ApiBearerAuth()
-  @UseGuards(EvmAuthGuard)
+  // @ApiBearerAuth()
+  // @UseGuards(EvmAuthGuard)
   @Get('/setup')
-  async setup() {
+  async getConfig() {
+    // check if setup.log exists
+    const path = p.join(process.cwd(), 'public/logs', 'setup.log');
+    let setupLog = '';
+    try {
+      setupLog = fs.readFileSync(path, 'utf8');
+    } catch (error) {
+      console.log('Setup log not found');
+    }
+    if (setupLog.length > 0) {
+      throw new ForbiddenException(
+        'Setup already done. Delete `setup.log` to run setup again.',
+      );
+    }
     return this._appService.getAgentsAndToolsConfig();
+  }
+
+  @Post('/setup')
+  async updateConfig(@Req() request: Request) {
+    // check if setup.log exists
+    const path = p.join(process.cwd(), 'public/logs', 'setup.log');
+    let setupLog = '';
+    try {
+      setupLog = fs.readFileSync(path, 'utf8');
+    } catch (error) {
+      console.log('Setup log not found');
+    }
+    if (setupLog.length > 0) {
+      throw new ForbiddenException(
+        'Setup already done. Delete `setup.log` to run setup again.',
+      );
+    }
+    const body = request.body;
+    const agentsConfig: {
+      fileName: string;
+      Name: string;
+      Enabled: boolean;
+      Description: string;
+      Instructions: string;
+      Tools: {
+        Name: string;
+        type: string;
+      }[];
+      Ctrl: string | undefined;
+    }[] = body.agentsConfig || [];
+    console.log(agentsConfig);
+    // set files config
+    agentsConfig.forEach(({ fileName, ...agent }) => {
+      const filePath = p.join(
+        process.cwd(),
+        'characters',
+        `${fileName.includes('yml') ? fileName : `${fileName}.yml`}`,
+      );
+      // convert `agent` to yaml
+      const yamlString = convertJSONToYAML(agent);
+      // write to file if exists or create new file
+      fs.writeFileSync(filePath, yamlString);
+    });
+    // run child script to rebuild app and restart server
+    console.log('Build application with config...');
+    try {
+      await new Promise((resolve, reject) => {
+        const child = exec('npm run build');
+        child.on('close', (code) => {
+          if (code === 0) {
+            resolve(true);
+          } else {
+            reject();
+          }
+        });
+      });
+    } catch (error) {
+      console.error('Build failed');
+      return {
+        data: error instanceof Error ? error.message : 'Unknown error',
+        success: false,
+      };
+    }
+    console.log('Build done!');
+    console.log('Restarting services...');
+    new Promise(async (resolve, reject) => {
+      // await to allow user to see the success message
+      await new Promise((resolve) => {
+        setTimeout(() => {
+          resolve(true);
+        }, 100);
+      });
+      const child = exec('npm run restart:pm2');
+      child.on('close', (code) => {
+        if (code === 0) {
+          // write or create setup.log
+          fs.writeFileSync(path, new Date().toISOString());
+          // resolve promise
+          resolve(true);
+        } else {
+          reject(false);
+        }
+      });
+    }).catch((error) => {
+      console.error('Restart failed');
+      return {
+        data: error instanceof Error ? error.message : 'Unknown error',
+        success: false,
+      };
+    });
+    // return default response
+    return {
+      data: 'success',
+      success: true,
+    };
   }
 }
