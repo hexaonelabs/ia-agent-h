@@ -31,7 +31,7 @@
               </ion-col>
               <ion-col size="auto">
                 <ion-badge color="primary">
-                  {{ agent.Tools?.length || 0 }}
+                  {{ (agent.Tools || [] | activeTools)?.length || 0 }}
                 </ion-badge>
               </ion-col>
             </ion-row>
@@ -48,11 +48,15 @@
 </ion-content>
 <ion-footer>
   <ion-toolbar>
-    <ion-button 
-      expand="block" 
+    <ion-button
+      expand="block"
       color="primary"
       [disabled]="forms.pristine"
-      (click)="saveConfig()">Save</ion-button>
+      (click)="saveConfig()"
+      >
+       Start your team
+      </ion-button
+    >
   </ion-toolbar>
 </ion-footer>
 
@@ -71,7 +75,10 @@
         </ion-buttons>
       </ion-toolbar>
     </ion-header>
-    <ion-content *ngIf="selectedFormIndex >= 0 && forms && forms.length > 0" class="ion-padding">
+    <ion-content
+      *ngIf="selectedFormIndex >= 0 && forms && forms.length > 0"
+      class="ion-padding"
+    >
       <ion-grid fixed class="ion-margin-vertical rounded-2xl">
         <ion-row>
           <ion-col>
@@ -196,7 +203,19 @@
                   </ion-accordion>
                   <ion-accordion value="Tools">
                     <ion-item slot="header">
-                      <ion-label>Tools</ion-label>
+                      <ion-label>
+                        Tools
+                        <small>
+                          ({{
+                            (
+                              $any(selectedForm.get('Tools'))?.value || []
+                              | activeTools
+                            )?.length || 0
+                          }}/{{
+                            $any(selectedForm.get('Tools'))?.value?.length || 0
+                          }})
+                        </small>
+                      </ion-label>
                     </ion-item>
                     <div class="padding" slot="content">
                       <ion-list formArrayName="Tools">
@@ -234,7 +253,10 @@
               color="danger"
               class="ion-margin-top"
               [disabled]="selectedFormIndex === 0"
-              (click)="forms.removeAt(selectedFormIndex); selectedFormIndex = -1">
+              (click)="
+                forms.removeAt(selectedFormIndex); selectedFormIndex = -1
+              "
+            >
               Delete Agent
             </ion-button>
           </ion-col>
@@ -246,7 +268,8 @@
         <ion-button
           expand="block"
           (click)="selectedFormIndex = -1"
-          color="primary">
+          color="primary"
+        >
           Validate
         </ion-button>
       </ion-toolbar>

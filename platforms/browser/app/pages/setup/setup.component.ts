@@ -44,6 +44,7 @@ import {
 } from '@ionic/angular/standalone';
 import { addIcons } from 'ionicons';
 import { close } from 'ionicons/icons';
+import { ActiveToolsPipe } from '../../pipes/active-tools/active-tools.pipe';
 
 const UIElements = [
   IonContent,
@@ -82,7 +83,7 @@ const UIElements = [
 @Component({
   selector: 'app-setup',
   standalone: true,
-  imports: [ReactiveFormsModule, CommonModule, ...UIElements],
+  imports: [ReactiveFormsModule, CommonModule, ...UIElements, ActiveToolsPipe],
   templateUrl: './setup.component.html',
   styleUrl: './setup.component.css',
 })
