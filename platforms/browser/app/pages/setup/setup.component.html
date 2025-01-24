@@ -13,7 +13,7 @@
         </ion-label>
       </ion-col>
       <ion-col size="auto">
-        <ion-button> add agent </ion-button>
+        <ion-button (click)="addNewAgent()"> add agent </ion-button>
       </ion-col>
     </ion-row>
     <ion-row
@@ -97,7 +97,7 @@
                       <ion-label>Description</ion-label>
                     </ion-item>
                     <div class="padding" slot="content">
-                      <ion-item>
+                      <ion-item lines="none">
                         <ion-textarea
                           labelPlacement="stacked"
                           [counter]="true"
@@ -114,7 +114,7 @@
                       <ion-label>Instructions</ion-label>
                     </ion-item>
                     <div class="padding" slot="content">
-                      <ion-item>
+                      <ion-item lines="none">
                         <ion-textarea
                           labelPlacement="stacked"
                           [counter]="true"
@@ -160,6 +160,15 @@
                 </ion-accordion-group>
               </ion-list>
             </form>
+            <ion-button
+              expand="block"
+              fill="outline"
+              color="danger"
+              class="ion-margin-top"
+              [disabled]="selectedFormIndex === 0"
+              (click)="forms.removeAt(selectedFormIndex); selectedFormIndex = -1">
+              Delete Agent
+            </ion-button>
           </ion-col>
         </ion-row>
       </ion-grid>

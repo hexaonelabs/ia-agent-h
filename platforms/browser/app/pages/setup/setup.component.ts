@@ -167,6 +167,34 @@ export class SetupComponent {
     return formGroup;
   }
 
+  async addNewAgent() {
+    // clone first form
+    const newAgentForm = this.createAgentForm(this.forms.at(0).value);
+    // reset form values
+    newAgentForm.reset();
+    // remove controle `Tools`
+    newAgentForm.removeControl('Tools');
+    // add tools based on config.toolsAvailable
+    const tools = new FormArray([] as any);
+    this.config?.toolsAvailable?.forEach((tool) => {
+      tools.push(
+        new FormGroup({
+          selected: new FormControl(false),
+          Name: new FormControl(tool.Name),
+          Description: new FormControl(tool.Description),
+          Type: new FormControl(tool.Type),
+        }),
+      );
+    });
+    newAgentForm.addControl('Tools', tools);
+    // set default name
+    (newAgentForm.get('Name') as any)?.setValue(
+      `Agent ${this.forms.length + 1}`,
+    );
+    // add new agent form
+    this.forms.push(newAgentForm);
+  }
+
   async saveConfig() {
     // get agents config
     const formsValues = this.forms.controls.map((form) => form.value);
