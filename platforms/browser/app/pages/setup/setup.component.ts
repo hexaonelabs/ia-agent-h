@@ -173,6 +173,11 @@ export class SetupComponent {
     const newAgentForm = this.createAgentForm(this.forms.at(0).value);
     // reset form values
     newAgentForm.reset();
+    // set fileName field
+    newAgentForm.setControl(
+      'fileName',
+      new FormControl(`agent-${this.forms.length + 1}`),
+    );
     // remove controle `Tools`
     newAgentForm.removeControl('Tools');
     // add tools based on config.toolsAvailable
