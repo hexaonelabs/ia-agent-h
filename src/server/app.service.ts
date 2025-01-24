@@ -43,7 +43,11 @@ export class AppService {
   async getAgentsAndToolsConfig() {
     const files = getAllAssistantsFileName();
     const agentsConfig = files.map((file) => {
-      return getAssistantConfig(file);
+      const config = getAssistantConfig(file);
+      return {
+        ...config,
+        fileName: file,
+      };
     });
     const toolsAvailable = getAllTools();
     return { agentsConfig, toolsAvailable };
