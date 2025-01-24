@@ -1,0 +1,178 @@
+<ion-content>
+  <ion-grid fixed>
+    <ion-row class="ion-align-items-center ion-padding">
+      <ion-col>
+        <ion-label>
+          <h2>Setup your Team</h2>
+          <p>
+            Setup your team by adding agents and tools to your team. Agents are
+            the team members who will be using the tools to perform the tasks.
+            Tools are the software applications that the agents will be using to
+            perform the tasks.
+          </p>
+        </ion-label>
+      </ion-col>
+      <ion-col size="auto">
+        <ion-button> add agent </ion-button>
+      </ion-col>
+    </ion-row>
+    <ion-row
+      class="ion-align-items-center"
+      *ngIf="config?.agentsConfig as agentsConfig"
+    >
+      <ion-col *ngFor="let agent of forms.value; let i = index">
+        <ion-card button (click)="selectedFormIndex = i">
+          <ion-card-header>
+            <ion-row class="ion-align-items-center">
+              <ion-col>
+                <ion-card-title>
+                  {{ agent.Name }}
+                </ion-card-title>
+              </ion-col>
+              <ion-col size="auto">
+                <ion-badge color="primary">
+                  {{ agent.Tools?.length || 0 }}
+                </ion-badge>
+              </ion-col>
+            </ion-row>
+          </ion-card-header>
+          <ion-card-content>
+            <ion-chip [color]="agent.Enabled ? 'success' : 'medium'">{{
+              agent.Enabled ? 'active' : 'disabled'
+            }}</ion-chip>
+          </ion-card-content>
+        </ion-card>
+      </ion-col>
+    </ion-row>
+  </ion-grid>
+</ion-content>
+<ion-footer>
+  <ion-toolbar>
+    <ion-button 
+      expand="block" 
+      color="primary"
+      [disabled]="forms.pristine"
+      (click)="saveConfig()">Save</ion-button>
+  </ion-toolbar>
+</ion-footer>
+
+<ion-modal
+  [isOpen]="selectedFormIndex >= 0"
+  (didDismiss)="selectedFormIndex = -1"
+  class="modal-page"
+>
+  <ng-template #page>
+    <ion-header>
+      <ion-toolbar>
+        <ion-buttons slot="end">
+          <ion-button (click)="selectedFormIndex = -1">
+            <ion-icon slot="icon-only" name="close"></ion-icon>
+          </ion-button>
+        </ion-buttons>
+      </ion-toolbar>
+    </ion-header>
+    <ion-content *ngIf="selectedFormIndex >= 0 && forms && forms.length > 0" class="ion-padding">
+      <ion-grid fixed class="ion-margin-vertical rounded-2xl">
+        <ion-row>
+          <ion-col>
+            <form [formGroup]="selectedForm">
+              <ion-list>
+                <ion-item lines="none" class="ion-padding-top">
+                  <ion-toggle justify="space-between" formControlName="Enabled">
+                    <ion-label>
+                      <h3>Active</h3>
+                    </ion-label>
+                  </ion-toggle>
+                </ion-item>
+                <ion-item>
+                  <ion-input
+                    label="Name"
+                    labelPlacement="stacked"
+                    formControlName="Name"
+                  />
+                </ion-item>
+                <ion-accordion-group>
+                  <ion-accordion value="Description">
+                    <ion-item slot="header">
+                      <ion-label>Description</ion-label>
+                    </ion-item>
+                    <div class="padding" slot="content">
+                      <ion-item>
+                        <ion-textarea
+                          labelPlacement="stacked"
+                          [counter]="true"
+                          maxlength="2000"
+                          [autoGrow]="true"
+                          placeholder="Description of the agent"
+                          formControlName="Description"
+                        />
+                      </ion-item>
+                    </div>
+                  </ion-accordion>
+                  <ion-accordion value="Instructions">
+                    <ion-item slot="header">
+                      <ion-label>Instructions</ion-label>
+                    </ion-item>
+                    <div class="padding" slot="content">
+                      <ion-item>
+                        <ion-textarea
+                          labelPlacement="stacked"
+                          [counter]="true"
+                          maxlength="2000"
+                          [autoGrow]="true"
+                          placeholder="Describe the instructions for the agent"
+                          formControlName="Instructions"
+                        />
+                      </ion-item>
+                    </div>
+                  </ion-accordion>
+                  <ion-accordion value="Tools">
+                    <ion-item slot="header">
+                      <ion-label>Tools</ion-label>
+                    </ion-item>
+                    <div class="padding" slot="content">
+                      <ion-list formArrayName="Tools">
+                        <ion-item
+                          *ngFor="
+                            let tool of $any(selectedForm?.get('Tools'))
+                              ?.controls || [];
+                            let i = index
+                          "
+                          [formGroupName]="i"
+                        >
+                          <ion-toggle
+                            justify="space-between"
+                            formControlName="selected"
+                          >
+                            <ion-label>
+                              <h3>
+                                {{ tool.value.Name }}
+                              </h3>
+                              <p>
+                                {{ tool.value.Description }}
+                              </p>
+                            </ion-label>
+                          </ion-toggle>
+                        </ion-item>
+                      </ion-list>
+                    </div>
+                  </ion-accordion>
+                </ion-accordion-group>
+              </ion-list>
+            </form>
+          </ion-col>
+        </ion-row>
+      </ion-grid>
+    </ion-content>
+    <ion-footer>
+      <ion-toolbar>
+        <ion-button
+          expand="block"
+          (click)="selectedFormIndex = -1"
+          color="primary">
+          Validate
+        </ion-button>
+      </ion-toolbar>
+    </ion-footer>
+  </ng-template>
+</ion-modal>
