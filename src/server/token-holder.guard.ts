@@ -31,17 +31,29 @@ export class TokenHolderGuard implements CanActivate {
   private async extractAddressFromRequest(
     request: any,
   ): Promise<string | undefined> {
+    const headerToken = this.extractTokenFromHeader(request);
+    const urlToken = this.extractTokenFromUrl(request);
+    const headerValid = headerToken
+      ? await this.jwtService.verify(headerToken)
+      : undefined;
+    const urlValid = urlToken
+      ? await this.jwtService.verify(urlToken)
+      : undefined;
     return (
       request?.body?.address ||
       request['user']?.address ||
-      (await this.jwtService.verify(this.extractTokenFromHeader(request)))
-        ?.address
+      headerValid?.address ||
+      urlValid?.address
     );
   }
 
   private extractTokenFromHeader(request: any): string | undefined {
     const [type, token] = request.headers.authorization?.split(' ') ?? [];
     return type === 'Bearer' ? token : undefined;
+  }
+
+  private extractTokenFromUrl(request: any): string | undefined {
+    return request.query.token;
   }
 
   private async isWhiteListed(address: string): Promise<boolean> {

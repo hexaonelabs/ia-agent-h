@@ -1,27 +1,40 @@
-import { Body, Controller, Get, Post, Res, UseGuards } from '@nestjs/common';
+import {
+  Body,
+  Controller,
+  Get,
+  Post,
+  Req,
+  Res,
+  Sse,
+  UseGuards,
+} from '@nestjs/common';
 import { AppService } from './app.service';
 import { AgentService } from '../agents/agent.service';
 import * as fs from 'fs';
 import * as p from 'path';
-import { Response } from 'express';
+import { Response, Request } from 'express';
 import {
   ApiTags,
   ApiExcludeEndpoint,
   ApiOperation,
   ApiResponse,
+  ApiBearerAuth,
+  ApiBody,
 } from '@nestjs/swagger';
 import { SendPromptDto } from './dto/send-prompt.dto';
 import { PromptAPIResponse } from './entities/prompt-api-response.entity';
 import { EvmAuthGuard } from './evm-auth.guard';
 import { TokenHolderGuard } from './token-holder.guard';
+import { SseSubjectService } from './sse-subject.service';
+import { Observable } from 'rxjs';
 
-// @ApiBearerAuth()
 @ApiTags('Agent-H')
 @Controller()
 export class AppController {
   constructor(
     private readonly _appService: AppService,
     private readonly _agentService: AgentService,
+    private readonly _sseSubjectService: SseSubjectService,
   ) {}
 
   @ApiExcludeEndpoint()
@@ -52,30 +65,34 @@ export class AppController {
     );
   }
 
-  @UseGuards(EvmAuthGuard)
-  @UseGuards(TokenHolderGuard)
+  @ApiBearerAuth()
   @ApiOperation({ summary: `Send a prompt to ia agent manager` })
+  @ApiBody({ type: SendPromptDto })
   @ApiResponse({
     status: 200,
     description: 'The prompt was sent successfully',
     type: PromptAPIResponse,
   })
   @ApiResponse({ status: 403, description: 'Forbidden.' })
+  @UseGuards(EvmAuthGuard)
+  @UseGuards(TokenHolderGuard)
   @Post('/prompt')
-  async chat(@Body() body: SendPromptDto): Promise<{
+  async chat(@Req() request: Request): Promise<{
     data: {
       threadId: string;
       message: string;
     };
     success: boolean;
   }> {
+    const body = request.body;
     let threadId = body.threadId;
     if (!threadId) {
       const thread = await this._agentService.createThread();
       threadId = thread.id;
     }
+    const userAddress = request['user'].address;
     const response = await this._agentService
-      .sendMessage({ ...body, threadId })
+      .sendMessage({ ...body, threadId }, userAddress)
       .then((data) => ({ data, success: true }))
       .catch((error) => ({
         data: {
@@ -87,6 +104,20 @@ export class AppController {
     return response;
   }
 
+  /**
+   * Message event from server using SSE.
+   * @return an observable that emit message to the client
+   */
+  @ApiExcludeEndpoint()
+  @UseGuards(EvmAuthGuard)
+  @UseGuards(TokenHolderGuard)
+  @Sse('/sse')
+  sse(@Req() request: Request): Observable<MessageEvent> {
+    const usserAddress = request['user'].address;
+    return this._sseSubjectService.getUserSubject$(usserAddress);
+  }
+
+  @ApiBearerAuth()
   @UseGuards(EvmAuthGuard)
   @UseGuards(TokenHolderGuard)
   @Get('/logs')

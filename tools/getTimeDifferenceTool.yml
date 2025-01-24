@@ -1,0 +1,19 @@
+Name: get_time_difference
+Description: Calculat Unix Timestamp from now added with specified delay
+Handler: tools/getTimeDifference
+Args: 
+  - Name: diffHours
+    Description: Numer of hours to add to the current timestamp
+    Required: true
+    Type: number
+    Pattern: ^[0-9]{1,10}$
+  - Name: diffMinutes
+    Description: Numer of minutes to add to the current timestamp
+    Required: true
+    Type: number
+    Pattern: ^[0-9]{1,10}$
+  - Name: diffSeconds
+    Description: Numer of seconds to add to the current timestamp
+    Required: true
+    Type: number
+    Pattern: ^[0-9]{1,10}$

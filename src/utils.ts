@@ -2,6 +2,7 @@ import * as fs from 'fs';
 import * as yaml from 'js-yaml';
 import * as p from 'path';
 import { arbitrum, mainnet, sepolia } from 'viem/chains';
+import { TaskSchedulerService } from './server/task-scheduler.service';
 
 export interface ToolConfig<T = any> {
   definition: {
@@ -18,7 +19,11 @@ export interface ToolConfig<T = any> {
       };
     };
   };
-  handler: (args: T) => Promise<any>;
+  handler: (
+    args: T,
+    taskSchedulerService?: TaskSchedulerService,
+    userAddress?: string,
+  ) => Promise<any>;
 }
 
 interface Arg {
