@@ -156,7 +156,7 @@ export class AppController {
     try {
       setupLog = fs.readFileSync(path, 'utf8');
     } catch (error) {
-      console.log('Setup log not found');
+      // console.log('Setup log not found');
     }
     if (setupLog.length > 0) {
       throw new ForbiddenException(
@@ -174,7 +174,7 @@ export class AppController {
     try {
       setupLog = fs.readFileSync(path, 'utf8');
     } catch (error) {
-      console.log('Setup log not found');
+      // console.log('Setup log not found');
     }
     if (setupLog.length > 0) {
       throw new ForbiddenException(
@@ -194,7 +194,6 @@ export class AppController {
       }[];
       Ctrl: string | undefined;
     }[] = body.agentsConfig || [];
-    console.log(agentsConfig);
     // set files config
     agentsConfig.forEach(({ fileName, ...agent }) => {
       const filePath = p.join(
