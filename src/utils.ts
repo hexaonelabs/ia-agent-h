@@ -92,21 +92,17 @@ export const getAllTools = () => {
     Name: any;
     Enabled: any;
     Description: any;
+    Personality: string;
+    Roleplay: string;
+    Skills: string;
+    Mission: string;
     Instructions: any;
     Tools: any;
     Ctrl: any;
   }[] = [];
   for (const file of filesName) {
     const fileContent = fs.readFileSync(`${filePath}/${file}.yml`, 'utf-8');
-    const {
-      Name,
-      Enabled,
-      Description,
-      Instructions,
-      Tools,
-      Ctrl = undefined,
-    } = yaml.load(fileContent) as any;
-    const tool = { Name, Enabled, Description, Instructions, Tools, Ctrl };
+    const tool = yaml.load(fileContent) as any;
     tools.push(tool);
   }
   return tools;
@@ -123,6 +119,10 @@ export const getAssistantConfig = (
   Name: string;
   Enabled: boolean;
   Description: string;
+  Personality: string;
+  Roleplay: string;
+  Skills: string;
+  Mission: string;
   Instructions: string;
   Tools: {
     Name: string;
@@ -138,15 +138,7 @@ export const getAssistantConfig = (
       : assistantFileName,
   );
   const fileContent = fs.readFileSync(filePath, 'utf-8');
-  const {
-    Name,
-    Enabled,
-    Description,
-    Instructions,
-    Tools,
-    Ctrl = undefined,
-  } = yaml.load(fileContent) as any;
-  return { Name, Enabled, Description, Instructions, Tools, Ctrl };
+  return yaml.load(fileContent) as any;
 };
 
 /**
@@ -262,8 +254,16 @@ export const yamlToToolParser = async (
  */
 export const getAssistantPrompt = async (fileName: string = 'agent-h.yml') => {
   // load file content from `characters/name.yml` file
-  const { Name, Description, Instructions, Tools } =
-    getAssistantConfig(fileName);
+  const {
+    Name,
+    Description,
+    Instructions,
+    Tools,
+    Mission,
+    Personality,
+    Roleplay,
+    Skills,
+  } = getAssistantConfig(fileName);
 
   // get all tools names, group by type & normalize to camel case
   const readToolsNames =
@@ -296,8 +296,22 @@ export const getAssistantPrompt = async (fileName: string = 'agent-h.yml') => {
     }),
   );
   // build prompt string text
-  const assistantPrompt = `# ${Name}
+  const assistantPrompt = `# You are ${Name}
+
+## Description:
 ${Description}
+
+## Personality:
+${Personality}
+
+## Roleplay:
+${Roleplay}
+
+## Skills: 
+${Skills}
+
+## Mission:
+${Mission}
 
 ${[...readTools, ...writeTools].length > 0 ? 'To acompish this mission you have access & you can perform allo these tools to execute multiples operations:' : ''}  
 ${readTools.length > 0 ? '## 1 READ OPERATIONS:' : ''}
