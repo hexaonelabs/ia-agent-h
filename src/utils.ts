@@ -73,6 +73,45 @@ export const getAssistantsFileName = () => {
   return enabledFilesName;
 };
 
+export const getAllAssistantsFileName = () => {
+  const filePath = p.join(process.cwd(), 'characters');
+  const files = fs.readdirSync(filePath);
+  const filesName = files
+    .filter((file) => file.includes('.yml'))
+    .map((file) => file.split('.yml')[0]);
+  return filesName;
+};
+
+export const getAllTools = () => {
+  const filePath = p.join(process.cwd(), 'tools');
+  const files = fs.readdirSync(filePath);
+  const filesName = files
+    .filter((file) => file.includes('.yml'))
+    .map((file) => file.split('.yml')[0]);
+  const tools: {
+    Name: any;
+    Enabled: any;
+    Description: any;
+    Instructions: any;
+    Tools: any;
+    Ctrl: any;
+  }[] = [];
+  for (const file of filesName) {
+    const fileContent = fs.readFileSync(`${filePath}/${file}.yml`, 'utf-8');
+    const {
+      Name,
+      Enabled,
+      Description,
+      Instructions,
+      Tools,
+      Ctrl = undefined,
+    } = yaml.load(fileContent) as any;
+    const tool = { Name, Enabled, Description, Instructions, Tools, Ctrl };
+    tools.push(tool);
+  }
+  return tools;
+};
+
 /**
  * Function that returns the assistant config object from the assistant file name
  * @param assistantFileName

@@ -142,4 +142,11 @@ export class AppController {
       };
     }
   }
+
+  @ApiBearerAuth()
+  @UseGuards(EvmAuthGuard)
+  @Get('/setup')
+  async setup() {
+    return this._appService.getAgentsAndToolsConfig();
+  }
 }

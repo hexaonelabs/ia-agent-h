@@ -3,6 +3,11 @@ import { createReadStream } from 'node:fs';
 import { join } from 'node:path';
 import { ethers } from 'ethers';
 import { JwtService } from '@nestjs/jwt';
+import {
+  getAllAssistantsFileName,
+  getAllTools,
+  getAssistantConfig,
+} from '../utils';
 
 @Injectable()
 export class AppService {
@@ -33,5 +38,16 @@ export class AppService {
     return {
       access_token: this.jwtService.sign(payload),
     };
+  }
+
+  async getAgentsAndToolsConfig() {
+    const files = getAllAssistantsFileName();
+    const agentsConfig = files.map((file) => {
+      const { Name, Description, Tools } = getAssistantConfig(file);
+      console.log({ Name, Description, Tools });
+      return { Name, Description, Tools };
+    });
+    const toolsAvailable = getAllTools();
+    return { agentsConfig, toolsAvailable };
   }
 }
