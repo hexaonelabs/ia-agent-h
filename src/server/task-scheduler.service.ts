@@ -32,16 +32,17 @@ export class TaskSchedulerService {
     ) => Promise<{ threadId: string; message: string }>,
   ) {
     this._sendPromptFn = fn;
-    this._runTasks();
-    this._loadTasks();
     // Run tasks every 15 seconds
     setInterval(() => {
       this._runTasks();
       this._loadTasks();
     }, 15000);
-    this._logger.log(
-      `🚀 Task Scheduler Service is ready and looking to execute task every 15000ms`,
-    );
+    const t = setInterval(() => {
+      this._logger.log(
+        `🚀 Task Scheduler Service is ready and looking to execute task every 15000ms`,
+      );
+      clearInterval(t);
+    }, 14900);
   }
 
   addTask(
