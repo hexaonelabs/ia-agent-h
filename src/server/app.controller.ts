@@ -163,7 +163,17 @@ export class AppController {
         'Setup already done. Delete `setup.log` to run setup again.',
       );
     }
-    return this._appService.getAgentsAndToolsConfig();
+    return this._appService.getAgentsAndToolsConfig().then((data) => ({
+      // sort `Agent H` at the first position and the rest after by alphabetically
+      agentsConfig: data.agentsConfig.sort((a, b) =>
+        a.Name === 'Agent H'
+          ? -1
+          : b.Name === 'Agent H'
+            ? 1
+            : a.Name.localeCompare(b.Name),
+      ),
+      toolsAvailable: data.toolsAvailable,
+    }));
   }
 
   @Post('/setup')
