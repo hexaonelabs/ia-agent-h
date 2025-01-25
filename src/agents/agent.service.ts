@@ -32,6 +32,7 @@ export class AgentService {
       tools: ToolConfig<any>[];
       ctrl: {
         start: () => Promise<void>;
+        stop?: () => Promise<void>;
       };
     }
   > = {};
@@ -39,18 +40,38 @@ export class AgentService {
   private readonly inMemoryThreadsMesssages: Record<string, string[]> = {};
   private readonly _logger = new CustomLogger(AgentService.name);
   constructor(private _taskSchedulerService: TaskSchedulerService) {
-    this._taskSchedulerService.setExecuter(this.sendMessage.bind(this));
     this._client = new OpenAI();
-    this._createAssistant(this._client, 'agent-h')
-      .then(async ({ assistant, tools }) => {
-        this._agent = {
-          assistant,
-          tools,
-        };
-      })
-      .then(async () => {
-        await this._manageAgents();
-      });
+    this.startAgents();
+    this._taskSchedulerService.setExecuter(this.sendMessage.bind(this));
+  }
+
+  async startAgents() {
+    // create main agent
+    const { assistant, tools } = await this._createAssistant(
+      this._client,
+      'agent-h',
+    );
+    // stage main agent
+    this._agent = {
+      assistant,
+      tools,
+    };
+    // init all others agents
+    await this._manageAgents();
+  }
+
+  async restartAgents() {
+    this._logger.log('Restarting agents...');
+    // stop all agents
+    await Promise.all(
+      Object.values(this._managedAgents).map((agent) => agent.ctrl?.stop()),
+    );
+    // remove all agents
+    this._managedAgents = {};
+    // stop main agent
+    this._agent = undefined;
+    // start all agents
+    await this.startAgents();
   }
 
   async createThread() {

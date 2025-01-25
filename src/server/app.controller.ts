@@ -28,7 +28,6 @@ import { EvmAuthGuard } from './evm-auth.guard';
 import { TokenHolderGuard } from './token-holder.guard';
 import { SseSubjectService } from './sse-subject.service';
 import { Observable } from 'rxjs';
-import { exec } from 'child_process';
 import { convertJSONToYAML } from 'src/utils';
 
 @ApiTags('Agent-H')
@@ -215,53 +214,21 @@ export class AppController {
       // write to file if exists or create new file
       fs.writeFileSync(filePath, yamlString);
     });
-    // run child script to rebuild app and restart server
-    console.log('Build application with config...');
-    try {
-      await new Promise((resolve, reject) => {
-        const child = exec('npm run build');
-        child.on('close', (code) => {
-          if (code === 0) {
-            resolve(true);
-          } else {
-            reject();
-          }
-        });
-      });
-    } catch (error) {
-      console.error('Build failed');
-      return {
-        data: error instanceof Error ? error.message : 'Unknown error',
-        success: false,
-      };
-    }
-    console.log('Build done!');
-    console.log('Restarting services...');
-    new Promise(async (resolve, reject) => {
-      // await to allow user to see the success message
-      await new Promise((resolve) => {
-        setTimeout(() => {
-          resolve(true);
-        }, 100);
-      });
-      const child = exec('npm run restart:pm2');
-      child.on('close', (code) => {
-        if (code === 0) {
-          // write or create setup.log
-          fs.writeFileSync(path, new Date().toISOString());
-          // resolve promise
-          resolve(true);
-        } else {
-          reject(false);
-        }
-      });
-    }).catch((error) => {
-      console.error('Restart failed');
-      return {
-        data: error instanceof Error ? error.message : 'Unknown error',
-        success: false,
-      };
-    });
+    console.log('Write config done!');
+    await this._agentService.restartAgents();
+    // return default response
+    return {
+      data: 'success',
+      success: true,
+    };
+  }
+
+  @ApiBearerAuth()
+  @UseGuards(EvmAuthGuard)
+  @UseGuards(TokenHolderGuard)
+  @Post('/restart-agents')
+  async restartAgents() {
+    await this._agentService.restartAgents();
     // return default response
     return {
       data: 'success',
