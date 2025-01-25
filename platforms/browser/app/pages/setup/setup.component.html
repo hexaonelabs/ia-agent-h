@@ -49,20 +49,26 @@
 <ion-footer>
   <ion-toolbar>
     <ion-button
+      *ngIf="userAccount$ | async as userAccount; else authTmpl"
       expand="block"
       color="primary"
-      [disabled]="forms.pristine"
+      [disabled]="forms.pristine || !userAccount"
       (click)="saveConfig()"
-      >
-       Start your team
-      </ion-button
     >
+      Start your team
+    </ion-button>
+    <ng-template #authTmpl>
+      <ion-button expand="block" color="primary">
+        Authenticate with Wallet
+      </ion-button>
+    </ng-template>
   </ion-toolbar>
 </ion-footer>
 
 <ion-modal
   [isOpen]="selectedFormIndex >= 0"
   (didDismiss)="selectedFormIndex = -1"
+  id="setup-agent-modal"
   class="modal-page"
 >
   <ng-template #page>

@@ -1,5 +1,5 @@
 import { CommonModule } from '@angular/common';
-import { HttpClient } from '@angular/common/http';
+import { HttpClient, HttpHeaders } from '@angular/common/http';
 import { Component } from '@angular/core';
 import {
   FormArray,
@@ -7,7 +7,7 @@ import {
   FormGroup,
   ReactiveFormsModule,
 } from '@angular/forms';
-import { firstValueFrom } from 'rxjs';
+import { firstValueFrom, Observable, tap } from 'rxjs';
 import { environment } from '../../../environments/environment';
 import {
   IonAccordion,
@@ -41,10 +41,13 @@ import {
   IonTextarea,
   IonToggle,
   IonToolbar,
+  ModalController,
 } from '@ionic/angular/standalone';
 import { addIcons } from 'ionicons';
 import { close } from 'ionicons/icons';
 import { ActiveToolsPipe } from '../../pipes/active-tools/active-tools.pipe';
+import { AppService } from '../../app.service';
+import { ConnectUserModalComponent } from '../../components/connect-user-modal/connect-user-modal.component';
 
 const UIElements = [
   IonContent,
@@ -91,13 +94,37 @@ export class SetupComponent {
   public config: { agentsConfig: any[]; toolsAvailable: any[] } | undefined;
   public readonly forms = new FormArray<FormGroup<any>>([]);
   public selectedFormIndex = -1;
+  public readonly userAccount$: Observable<`0x${string}` | undefined>;
   public get selectedForm() {
     return this.forms.at(this.selectedFormIndex);
   }
-  constructor(private http: HttpClient) {
+  constructor(
+    private http: HttpClient,
+    private readonly _modalCtrl: ModalController,
+    private readonly _appService: AppService,
+  ) {
     addIcons({
       close,
     });
+    this.userAccount$ = this._appService.account$.pipe(
+      tap(async (account) => {
+        const previousModal = await this._modalCtrl.getTop();
+        const existingModal = previousModal?.id !== 'setup-agent-modal';
+        if (!account && !existingModal) {
+          const modal = await this._modalCtrl.create({
+            component: ConnectUserModalComponent,
+            backdropDismiss: false,
+            keyboardClose: false,
+          });
+          await modal.present();
+        }
+        if (account) {
+          if (existingModal && previousModal) {
+            await previousModal.dismiss();
+          }
+        }
+      }),
+    );
   }
 
   async ionViewWillEnter() {
@@ -137,8 +164,14 @@ export class SetupComponent {
   }
 
   async getAgentsAndToolsConfig() {
+    const token = localStorage.getItem('token');
+    const headers = new HttpHeaders({
+      'Content-Type': 'application/json',
+      Authorization: `Bearer ${token}`,
+    });
     const req = this.http.get<{ agentsConfig: any[]; toolsAvailable: any[] }>(
       environment.apiEndpoint + '/setup',
+      { headers },
     );
     const res = await firstValueFrom(req);
     const { agentsConfig, toolsAvailable } = res;
@@ -214,9 +247,18 @@ export class SetupComponent {
       };
     });
     // send agents config to server
-    const req = this.http.post(environment.apiEndpoint + '/setup', {
-      agentsConfig,
+    const token = localStorage.getItem('token');
+    const headers = new HttpHeaders({
+      'Content-Type': 'application/json',
+      Authorization: `Bearer ${token}`,
     });
+    const req = this.http.post(
+      environment.apiEndpoint + '/setup',
+      {
+        agentsConfig,
+      },
+      { headers },
+    );
     const res = await firstValueFrom(req);
     console.log(res);
   }
