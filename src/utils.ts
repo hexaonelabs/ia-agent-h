@@ -3,6 +3,7 @@ import * as yaml from 'js-yaml';
 import * as p from 'path';
 import { arbitrum, mainnet, sepolia } from 'viem/chains';
 import { TaskSchedulerService } from './server/task-scheduler.service';
+import OpenAI from 'openai';
 
 export interface ToolConfig<T = any> {
   definition: {
@@ -305,4 +306,14 @@ export const getNetworkByName = (network: string) => {
 
 export const convertJSONToYAML = (json: any) => {
   return yaml.dump(json);
+};
+
+export const createEmbedding = async (input: string) => {
+  const openai = new OpenAI();
+  const embedding = await openai.embeddings.create({
+    model: 'text-embedding-3-small',
+    encoding_format: 'float',
+    input,
+  });
+  return embedding;
 };
