@@ -26,7 +26,7 @@ export interface ToolConfig<T = any> {
   ) => Promise<any>;
 }
 
-interface Arg {
+export interface ToolsArg {
   Name: string;
   Description: string;
   Required: boolean;
@@ -36,11 +36,11 @@ interface Arg {
   Items?: any;
 }
 
-interface YamlData {
+export interface YamlTool {
   Name: string;
   Description: string;
   Handler: string;
-  Args: Arg[];
+  Args: ToolsArg[];
 }
 
 // replace `_` & `-` by convert to camel case
@@ -88,18 +88,7 @@ export const getAllTools = () => {
   const filesName = files
     .filter((file) => file.includes('.yml'))
     .map((file) => file.split('.yml')[0]);
-  const tools: {
-    Name: any;
-    Enabled: any;
-    Description: any;
-    Personality: string;
-    Roleplay: string;
-    Skills: string;
-    Mission: string;
-    Instructions: any;
-    Tools: any;
-    Ctrl: any;
-  }[] = [];
+  const tools: YamlTool[] = [];
   for (const file of filesName) {
     const fileContent = fs.readFileSync(`${filePath}/${file}.yml`, 'utf-8');
     const tool = yaml.load(fileContent) as any;
@@ -126,7 +115,6 @@ export const getAssistantConfig = (
   Instructions: string;
   Tools: {
     Name: string;
-    type: string;
   }[];
   Ctrl: string | undefined;
 } => {
@@ -204,7 +192,7 @@ export const yamlToToolParser = async (
     normalizedName.endsWith('.yml') ? normalizedName : `${normalizedName}.yml`,
   );
   const fileContents = fs.readFileSync(filePath, 'utf8');
-  const data: YamlData = yaml.load(fileContents) as YamlData;
+  const data: YamlTool = yaml.load(fileContents) as YamlTool;
   const importPath = `./tools/${data.Handler.includes('/') ? data.Handler.split('/').pop() : data.Handler}`;
 
   // load handler function from file

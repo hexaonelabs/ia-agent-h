@@ -38,5 +38,5 @@ Instructions: >
   - ALWAYS include all response data in your response when requesting a tool
 Tools: 
   - Name: get_market_data
-    type: read
+
 Ctrl: agents/market.agent

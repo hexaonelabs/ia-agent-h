@@ -200,7 +200,6 @@ export class AppController {
       Instructions: string;
       Tools: {
         Name: string;
-        type: string;
       }[];
       Ctrl: string | undefined;
     }[] = body.agentsConfig || [];

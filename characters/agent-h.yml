@@ -94,34 +94,23 @@ Instructions: |
 
 Tools:
   - Name: get_wallet_address
-    type: read
 
   - Name: get_balance
-    type: read
 
   - Name: get_token_balance
-    type: read
 
   - Name: get_contract_bytecode
-    type: read
 
   - Name: get_contract_abi
-    type: read
 
   - Name: deposit_to_aave
-    type: write
 
   - Name: get_transaction_receipt
-    type: read
   
   - Name: get_time_difference
-    type: read
   
   - Name: plan_execution
-    type: write
 
   # - Name: read_contract
-  #   type: read
 
   # - Name: write_code_to_file
-  #   type: write
