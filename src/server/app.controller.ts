@@ -1,4 +1,5 @@
 import {
+  BadRequestException,
   Body,
   Controller,
   ForbiddenException,
@@ -145,10 +146,10 @@ export class AppController {
     }
   }
 
-  // @ApiBearerAuth()
-  // @UseGuards(EvmAuthGuard)
+  @ApiBearerAuth()
+  @UseGuards(EvmAuthGuard)
   @Get('/setup')
-  async getConfig() {
+  async getConfig(@Req() request: Request) {
     // check if setup.log exists
     const path = p.join(process.cwd(), 'public/logs', 'setup.log');
     let setupLog = '';
@@ -157,9 +158,9 @@ export class AppController {
     } catch (error) {
       // console.log('Setup log not found');
     }
-    if (setupLog.length > 0) {
+    if (setupLog.length > 0 && setupLog !== request['user'].address) {
       throw new ForbiddenException(
-        'Setup already done. Delete `setup.log` to run setup again.',
+        'Setup already done. Delete `setup.log` to run setup again or use another wallet address.',
       );
     }
     return this._appService.getAgentsAndToolsConfig().then((data) => ({
@@ -175,6 +176,8 @@ export class AppController {
     }));
   }
 
+  @ApiBearerAuth()
+  @UseGuards(EvmAuthGuard)
   @Post('/setup')
   async updateConfig(@Req() request: Request) {
     // check if setup.log exists
@@ -185,9 +188,9 @@ export class AppController {
     } catch (error) {
       // console.log('Setup log not found');
     }
-    if (setupLog.length > 0) {
+    if (setupLog.length > 0 && setupLog !== request['user'].address) {
       throw new ForbiddenException(
-        'Setup already done. Delete `setup.log` to run setup again.',
+        'Setup already done. Delete `setup.log` to run setup again or use another wallet address.',
       );
     }
     const body = request.body;
@@ -202,6 +205,9 @@ export class AppController {
       }[];
       Ctrl: string | undefined;
     }[] = body.agentsConfig || [];
+    if (agentsConfig.length === 0) {
+      throw new BadRequestException('No agents config found');
+    }
     // set files config
     agentsConfig.forEach(({ fileName, ...agent }) => {
       const filePath = p.join(
@@ -214,7 +220,10 @@ export class AppController {
       // write to file if exists or create new file
       fs.writeFileSync(filePath, yamlString);
     });
-    console.log('Write config done!');
+    // create OR write to `setup.log` the address of the user
+    fs.writeFileSync(path, request['user'].address);
+    console.log(`Write config done! Executed by: ${request['user'].address}`);
+    // restart all agents
     await this._agentService.restartAgents();
     // return default response
     return {
@@ -227,7 +236,21 @@ export class AppController {
   @UseGuards(EvmAuthGuard)
   @UseGuards(TokenHolderGuard)
   @Post('/restart-agents')
-  async restartAgents() {
+  async restartAgents(@Req() request: Request) {
+    const path = p.join(process.cwd(), 'public/logs', 'setup.log');
+    let setupLog = '';
+    try {
+      setupLog = fs.readFileSync(path, 'utf8');
+    } catch (error) {
+      throw new BadRequestException(
+        'Setup not done. Run setup before restarting agents. Visit `/setup`',
+      );
+    }
+    if (setupLog.length > 0 && setupLog !== request['user'].address) {
+      throw new ForbiddenException(
+        'Not authorized to restart agents. Use another wallet address.',
+      );
+    }
     await this._agentService.restartAgents();
     // return default response
     return {
