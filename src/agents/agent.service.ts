@@ -64,7 +64,9 @@ export class AgentService {
     this._logger.log('Restarting agents...');
     // stop all agents
     await Promise.all(
-      Object.values(this._managedAgents).map((agent) => agent.ctrl?.stop()),
+      Object.values(this._managedAgents)
+        .filter((agent) => agent?.ctrl?.stop)
+        .map((agent) => agent.ctrl.stop()),
     );
     // remove all agents
     this._managedAgents = {};
