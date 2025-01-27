@@ -33,8 +33,8 @@ export class XAgent {
 
   private readonly _logger = new CustomLogger(XAgent.name);
 
-  constructor(client: OpenAI) {
-    this._client = client;
+  constructor() {
+    this._client = new OpenAI();
     this._logger.log(`🏗  Building Twitter client...`);
     this._xClient = new TwitterApi({
       appKey: process.env.TWITTER_APP_KEY,
@@ -144,6 +144,7 @@ export class XAgent {
         // loop over mentions
         for (const mention of mentions) {
           this._logger.log(`🛎 Found Mention with post ID: ${mention.id}`);
+          this._logger.log(`🧠 Generating tweet response to mention...`);
           const response = await this._generateResponse(mention.text);
           this._logger.log(
             `📣 Responding to mention ID ${mention.id}: ${response}`,
@@ -191,7 +192,7 @@ export class XAgent {
     prompt: string,
     role: 'user' | 'system' = 'user',
   ): Promise<string> {
-    // disable logging on development mode
+    // disable on development mode
     if (process.env.NODE_ENV !== 'production') {
       return;
     }
@@ -299,7 +300,8 @@ export class XAgent {
       return;
     }
     try {
-      // disable logging on development mode
+      // disable on development mode
+      this._logger.log(`🌞 Saying Good Morning is disable on development mode`);
       if (process.env.NODE_ENV !== 'production') {
         return;
       }
