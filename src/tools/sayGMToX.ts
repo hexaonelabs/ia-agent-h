@@ -61,7 +61,7 @@ export const sayGMToX = async (args: { message: string }) => {
         .diff(dayjs(), 'seconds'),
     });
     const prompt = `Generate and send a tweet based on the trend of #GM using "say_gm_to_x" tool. You tweet should start with "GM web3 Degen!"; "GM web3 family!"; "GM web3 community!"; "GM web3 friends!"; "GM web3 homies!"; "GM web3 squad!"; "GM web3 gang!"; "GM web3 team!"; "GM web3 crew!"; "GM web3 fam!"; fowllowed by a short funny positive message about the current crypto ia agent trends OR upcoming benefits of be a part of crypto family. The tweet should not include any hashtags, links or mentions and no special caracters like symbols or quotes.`;
-    return `execute tool calle "plan_execution" with the following args: 
+    return `execute tool call "plan_execution" with the following args: 
     - prompt: ${prompt} 
     - timestamp: ${timestamp}`;
   }
