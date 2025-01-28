@@ -67,7 +67,8 @@ export class XAgent {
   }
 
   private async _mentionsMonitoring() {
-    const TIMEOUT = 60 * 15 * 1000;
+    // 12h timout
+    const TIMEOUT = 12 * 60 * 60 * 1000;
     const delay = (ms: number) =>
       new Promise((resolve) => setTimeout(resolve, ms));
     let t;
@@ -238,7 +239,8 @@ export class XAgent {
   }
 
   private async _searchForNewAccountsToConnectWith() {
-    const TIMEOUT = 6 * 60 * 1000;
+    // 24h timout
+    const TIMEOUT = 24 * 60 * 60 * 1000;
     try {
       const response = await this._xClient.v2.search({
         query: `crypto OR blockchain OR NFT OR DeFi OR Web3 -is:retweet -is:reply -has:hashtags`,

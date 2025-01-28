@@ -146,6 +146,22 @@ export class AppController {
     }
   }
 
+  @Get('/is-setup')
+  async isSetup() {
+    // check if setup.log exists
+    const path = p.join(process.cwd(), 'public/logs', 'setup.log');
+    try {
+      const setupLog = fs.readFileSync(path, 'utf8');
+      return {
+        success: setupLog.length > 0,
+      };
+    } catch (error) {
+      return {
+        success: false,
+      };
+    }
+  }
+
   @ApiBearerAuth()
   @UseGuards(EvmAuthGuard)
   @Get('/setup')
