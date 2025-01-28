@@ -1,23 +1,23 @@
 appId: app.web.ai-agent-h
-productName: AIAgentH
+productName: AI Agent H
 directories:
   output: dist/packages
-  app: 'dist/platforms/desktop'
+  app: 'dist/platforms'
 files:
   - "**/*"
 mac:
-  icon: dist/platforms/desktop/assets/icons/logo.png
+  # icon: dist/platforms/desktop/assets/icons/logo.png
   category: public.app-category.productivity
   type: distribution
   darkModeSupport: true
   publish:
     - github
-linux:
-  icon: dist/platforms/desktop/assets/icons/logo.png
-  category: Utility
-  target: AppImage
-  publish:
-  - github
-win:
-  icon: dist/platforms/desktop/assets/icons/logo.png
+# linux:
+#   # icon: dist/platforms/desktop/assets/icons/logo.png
+#   category: Utility
+#   target: AppImage
+#   publish:
+#   - github
+# win:
+#   # icon: dist/platforms/desktop/assets/icons/logo.png
   

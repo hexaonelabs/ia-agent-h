@@ -7,8 +7,9 @@ import {
   session,
 } from 'electron';
 import * as path from 'path';
-import { spawn } from 'child_process';
+import { ChildProcess, fork } from 'child_process';
 import { Readable } from 'stream';
+import * as fs from 'fs';
 // import './app/app.element.ts';
 
 function stripAnsiColors(text: string): string {
@@ -20,7 +21,7 @@ function stripAnsiColors(text: string): string {
 
 function registerGlobalShortcuts() {
   globalShortcut.register('CommandOrControl+Shift+L', () => {
-    mainWindow!.webContents.send('show-server-log');
+    mainWindow!.webContents.send('show-server-log', inMemoryData.serverLog);
   });
   globalShortcut.register('CommandOrControl+Shift+I', () => {
     mainWindow!.webContents.openDevTools();
@@ -31,46 +32,91 @@ function unregisterAllShortcuts() {
   globalShortcut.unregisterAll();
 }
 
-const name = 'ia-agent-h';
-const expressAppUrl = 'http://127.0.0.1:3000';
-const appName = app.getPath('exe');
-let mainWindow: BrowserWindow | null;
-const expressPath =
-  appName.endsWith(`${name}.exe`) || appName.endsWith(name)
-    ? path.join(app.getAppPath(), 'dist/platforms/server/main.js')
-    : './dist/platforms/server/main.js';
+function getExpressPath() {
+  if (app.isPackaged) {
+    return path.join(
+      process.resourcesPath,
+      'app.asar',
+      'platforms',
+      'server',
+      'main.js',
+    );
+  } else {
+    return path.join(__dirname, 'dist', 'platforms', 'server', 'main.js');
+  }
+}
+
+function createExpressApp() {
+  const expressPath = getExpressPath();
+  // Check if the file exists
+  if (!fs.existsSync(expressPath)) {
+    console.error(`File not found: ${expressPath}`);
+    return;
+  }
+  // create express app with child process
+  expressAppProcess = fork(appName, [expressPath], {
+    env: { ELECTRON_RUN_AS_NODE: '1' },
+    stdio: ['pipe', 'pipe', 'pipe', 'ipc'],
+  });
+  // log express app output to main window
+  [
+    expressAppProcess.stdout,
+    expressAppProcess.stderr,
+    expressAppProcess,
+  ].forEach((stream: Readable) => {
+    if (!stream) {
+      inMemoryData.serverLog.push(`Stream is not available`);
+      return;
+    }
+    stream.on('data', (data: any) => {
+      if (!mainWindow) return;
+      data
+        .toString()
+        .split('\n')
+        .forEach((line: string) => {
+          if (line.trim() !== '') {
+            console.log(line);
+            inMemoryData.serverLog.push(line);
+            mainWindow!.webContents.send(
+              'server-log-entry',
+              'Express server process: ',
+              stripAnsiColors(line),
+            );
+          }
+        });
+    });
+    stream.on('message', (message: any) => {
+      if (message.trim() !== '') {
+        console.log(message);
+        inMemoryData.serverLog.push(message);
+        mainWindow!.webContents.send(
+          'server-log-entry',
+          'Express server process: ',
+          stripAnsiColors(message),
+        );
+      }
+    });
+    stream.on('error', (message: any) => {
+      if (message.trim() !== '') {
+        console.log(message);
+        inMemoryData.serverLog.push(message);
+        mainWindow!.webContents.send(
+          'server-log-entry',
+          'Express server process: ',
+          stripAnsiColors(message),
+        );
+      }
+    });
+  });
+}
 
 function createWindow(session: Session) {
-  // create express app with child process
-  const expressAppProcess = spawn(appName, [expressPath], {
-    env: { ELECTRON_RUN_AS_NODE: '1' },
-  });
-  [expressAppProcess.stdout, expressAppProcess.stderr].forEach(
-    (stream: Readable) => {
-      stream.on('data', (data: any) => {
-        if (!mainWindow) return;
-        data
-          .toString()
-          .split('\n')
-          .forEach((line: string) => {
-            if (line !== '') {
-              mainWindow!.webContents.send(
-                'server-log-entry',
-                stripAnsiColors(line),
-              );
-            }
-          });
-      });
-    },
-  );
-
   // Create the browser window.
   mainWindow = new BrowserWindow({
     height: 650,
     webPreferences: {
-      accessibleTitle: 'Storj Cloud Desktop',
-
-      // preload: path.join(app.getAppPath(), "preload.js"),
+      accessibleTitle: 'AI Agent H Desktop',
+      preload: path.join(__dirname, 'preload.js'),
       // SECURITY: use a custom session without a cache
       // https://github.com/1password/electron-secure-defaults/#disable-session-cache
       session,
@@ -89,7 +135,7 @@ function createWindow(session: Session) {
       javascript: true,
       // SECURITY: restrict dev tools access in the packaged app
       // https://github.com/1password/electron-secure-defaults/#restrict-dev-tools
-      devTools: !app.isPackaged,
+      // devTools: !app.isPackaged,
       // SECURITY: disable navigation via middle-click
       // https://github.com/1password/electron-secure-defaults/#disable-new-window
       disableBlinkFeatures: 'Auxclick',
@@ -111,14 +157,21 @@ function createWindow(session: Session) {
   mainWindow.on('focus', registerGlobalShortcuts);
   mainWindow.on('blur', unregisterAllShortcuts);
   // and load the index.html of the app.
-  mainWindow.loadFile(path.join(__dirname, `./index.html`));
+  mainWindow.loadFile(path.join(__dirname, '../browser', `./index.html`));
 
   // Open the DevTools.
-  if (!app.isPackaged) {
-    mainWindow.webContents.openDevTools();
-  }
+  // if (!app.isPackaged) {
+  mainWindow.webContents.openDevTools();
+  // }
 }
 
+const inMemoryData = {
+  serverLog: [],
+};
+const expressAppUrl = 'http://127.0.0.1:3000';
+const appName = app.getPath('exe');
+let expressAppProcess: ChildProcess | null;
+let mainWindow: BrowserWindow | null;
 // SECURITY: sandbox all renderer content
 // https://github.com/1password/electron-secure-defaults/#sandox
 app.enableSandbox();
@@ -132,8 +185,9 @@ app.on('ready', () => {
   const secureSession = session.fromPartition('persist:app', {
     cache: false,
   });
-  registerGlobalShortcuts();
+  createExpressApp();
   createWindow(secureSession);
+  registerGlobalShortcuts();
 
   app.on('activate', () => {
     // On macOS it's common to re-create a window in the app when the
@@ -142,17 +196,36 @@ app.on('ready', () => {
   });
 
   const checkServerRunning = setInterval(() => {
-    console.log('Checking if server is running...');
+    mainWindow!.webContents.send(
+      'server-log-entry',
+      'Electron process: ',
+      stripAnsiColors(`Checking if server is running...`),
+    );
+    mainWindow!.webContents.send(
+      'server-log-entry',
+      'Electron process: ',
+      stripAnsiColors(`Express path: ${getExpressPath()}`),
+    );
+    inMemoryData.serverLog.push(
+      `Checking if server is running on ${getExpressPath()}...`,
+    );
     fetch(expressAppUrl)
       .then((response) => {
         if (response.status === 200) {
           clearInterval(checkServerRunning);
-          mainWindow!.webContents.send('server-running');
-          console.log('Server is running!');
+          mainWindow!.webContents.send('server-running', 'Electron process: ');
+          inMemoryData.serverLog.push('Server is running!');
         }
       })
-      .catch(() => {}); // swallow exception
-  }, 1000);
+      .catch((err) => {
+        mainWindow!.webContents.send(
+          'server-log-entry',
+          'Electron process: ',
+          stripAnsiColors(`Error: ${err}`),
+        );
+        inMemoryData.serverLog.push(`Error: ${err}`);
+      }); // swallow exception
+  }, 2000);
 
   // SECURITY: deny permission requests from renderer
   // https://github.com/1password/electron-secure-defaults/#rule-4
@@ -211,9 +284,10 @@ app.on('web-contents-created', (_ev, contents) => {
 // code. You can also put them in separate files and require them here.
 
 // Handle messages and invocations coming from the renderer API
-
 ipcMain.on('sayHello', (_ev, name: string) => {
-  console.log(`Hello, ${name}, from the renderer process!`);
+  inMemoryData.serverLog.push(`Hello, ${name}, from the renderer process!`);
 });
 
+ipcMain.handle('get-express-app-url', () => expressAppUrl);
 ipcMain.handle('getAppMetrics', () => app.getAppMetrics());
+ipcMain.handle('get-electron-app-logs', () => inMemoryData.serverLog);

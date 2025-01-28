@@ -27,8 +27,20 @@ export const RendererApi = {
   getAppMetrics: (): Promise<Electron.ProcessMetric[]> => {
     return ipcRenderer.invoke('getAppMetrics');
   },
+
+  getExpressAppUrl: () => ipcRenderer.invoke('get-express-app-url'),
+  getElectronAppLogs: () => ipcRenderer.invoke('get-electron-app-logs'),
 };
 
 // SECURITY: expose a limted API to the renderer over the context bridge
 // https://github.com/1password/electron-secure-defaults/SECURITY.md#rule-3
-contextBridge.exposeInMainWorld('api', RendererApi);
+contextBridge.exposeInMainWorld('api', {
+  ...RendererApi,
+  send: (channel, data) => ipcRenderer.send(channel, data),
+  on: (channel, callback) => {
+    ipcRenderer.on(channel, (event, ...args) => callback(...args));
+  },
+  once: (channel, callback) => {
+    ipcRenderer.once(channel, (event, ...args) => callback(...args));
+  },
+});
