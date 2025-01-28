@@ -109,8 +109,11 @@ export class SetupComponent {
     this.userAccount$ = this._appService.account$.pipe(
       tap(async (account) => {
         const previousModal = await this._modalCtrl.getTop();
-        const existingModal = previousModal?.id !== 'setup-agent-modal';
-        if (!account && !existingModal) {
+        const connectModal =
+          previousModal?.id !== 'setup-agent-modal' && previousModal;
+        console.log({ account, connectModal, previousModal });
+
+        if (!account && !connectModal) {
           const modal = await this._modalCtrl.create({
             component: ConnectUserModalComponent,
             backdropDismiss: false,
@@ -119,8 +122,11 @@ export class SetupComponent {
           await modal.present();
         }
         if (account) {
-          if (existingModal && previousModal) {
+          if (connectModal && previousModal) {
             await previousModal.dismiss();
+            if (!this.config) {
+              this.ionViewWillEnter();
+            }
           }
         }
       }),
