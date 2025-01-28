@@ -9,6 +9,7 @@ import { Router } from '@angular/router';
 
 const appInitializer = (http: HttpClient, router: Router) => {
   return async () => {
+    console.log('appInitializer');
     const req = http.get(environment.apiEndpoint + '/is-setup');
     const response = await firstValueFrom(req).catch((err) => err);
     const currentLocationPath = window.location.pathname;
