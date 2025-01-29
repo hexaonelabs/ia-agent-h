@@ -133,6 +133,29 @@ export class LangchainChatController {
     return await this.langchainChatService.documentChat(message);
   }
 
+  @ApiBody({
+    schema: {
+      type: 'object',
+      properties: {
+        messages: {
+          type: 'array',
+          items: {
+            type: 'object',
+            properties: {
+              content: {
+                type: 'string',
+                example: 'Hello, how are you?',
+              },
+              role: {
+                type: 'string',
+                example: 'user',
+              },
+            },
+          },
+        },
+      },
+    },
+  })
   @Post('agent-chat')
   @HttpCode(200)
   async agentChat(
