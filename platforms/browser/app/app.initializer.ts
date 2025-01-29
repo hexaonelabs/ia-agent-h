@@ -12,7 +12,10 @@ const appInitializer = (http: HttpClient, router: Router) => {
     const req = http.get(environment.apiEndpoint + '/is-setup');
     const response = await firstValueFrom(req).catch((err) => err);
     const currentLocationPath = window.location.pathname;
-    if (!response?.success && !currentLocationPath.includes('/setup')) {
+    const isRedirect =
+      !response?.success && !currentLocationPath.includes('/setup');
+    console.log('appInitializer redirect: ', isRedirect);
+    if (isRedirect) {
       await router.navigateByUrl('/setup');
     }
   };
