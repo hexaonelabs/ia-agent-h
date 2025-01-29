@@ -308,11 +308,15 @@ export const convertJSONToYAML = (json: any) => {
   return yaml.dump(json);
 };
 
-export const createEmbedding = async (input: string) => {
+export const createEmbedding = async (
+  input: string,
+  model = 'text-embedding-3-small',
+  encoding_format = 'float' as 'float' | 'base64',
+) => {
   const openai = new OpenAI();
   const embedding = await openai.embeddings.create({
-    model: 'text-embedding-3-small',
-    encoding_format: 'float',
+    model,
+    encoding_format,
     input,
   });
   return embedding;
