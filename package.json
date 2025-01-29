@@ -9,6 +9,8 @@
   "icon": "./browser/favicon.ico",
   "expressPort": 3000,
   "scripts": {
+    "prebuild:desktop": "npm run build:browser -- --configuration=desktop-production && run build:server",
+    "prestart:desktop": "npm run build:desktop",
     "premake:desktop": "npm run build:browser -- --configuration=desktop-production && npm run build:server && npm run build:desktop && cp package.json ./dist/platforms && cp -r ./public ./dist/platforms",
     "premake:desktop:mac": "npm run build:browser -- --configuration=desktop-production && npm run build:server && npm run build:desktop && cp package.json ./dist/platforms && cp -r ./public ./dist/platforms",
     "predeploy:pwa": "npm run build:pwa",
