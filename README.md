@@ -25,7 +25,8 @@ Unleash the power of intelligent, autonomous agents in the decentralized world w
 - **🛠️ Highly extensible**: Create your own tools and agents assistant
 - **🔗 Direct blockchain interactions**: Provide default tools for EVM Blockchain interactions
 - **🔒 Secure and private API server Endpoint**: Include a NestJS server that expost Agent to HTTP Request
-- **📚 Easily configure & run:** Only one programming language & configuration based on yml file
+- **🖥 Desktop and Mobile PWA UI**: Include UI for desktop Electron App & Angular Progressive Web Application
+- **📚 Easily configure & run:** Only one programming language & configuration based on yml file or with UI
 - **🚀 Ready to use and deploy** Download, install, setup & deploy in less than 5 minutes
 
 
@@ -33,8 +34,8 @@ Unleash the power of intelligent, autonomous agents in the decentralized world w
 
 ### Prerequisites
 
-- [Node.js 20+](https://docs.npmjs.com/downloading-and-installing-node-js-and-npm)
-- [OpenIA API Key](https://platform.openai.com/settings/organization/general)
+- [OpenIA API Key](https://platform.openai.com/settings/organization/general) *(required)*
+- [Node.js 20+](https://docs.npmjs.com/downloading-and-installing-node-js-and-npm) *(non-required using Desktop App packaged with Electron)*
 
 ### Start by clone the repository
 
@@ -42,9 +43,8 @@ Unleash the power of intelligent, autonomous agents in the decentralized world w
 git clone https://github.com/hexaonelabs/ia-agent-h
 cd ia-agent-h
 cp .env.example .env
+npm install
 ```
-
-Once the agent is running, open you browser to `localhost:3000` and you should see the Agent H interface.
 
 ### Environment Variables
 1. open `.env` file and add your OpenAI API Key, Twitter credentials and other configuration that you want to use.
@@ -64,25 +64,46 @@ You can create your own tools by creating a new file inside `src/tools` director
 
 ### Start development server
 ```bash
-npm install
-npm run start:dev
+npm run serve:server
 ```
 
 ### Start production server
 ```bash
-npm install
-npm run start:prod
+npm run start:server
 ```
 
-or you can use `pm2` to run the server in background
+or you can use `pm2` to run the server in background. Ensure that you have `pm2` installed globally on your machine before running the command below.
 
 ```bash
-npm install -g pm2
-npm install
 npm run start:pm2
 ```
 
 *Note: The server will be running on `localhost:3000` by default. You can change the port by editing the `.env` file. You have multiples auther build in srcipts that you can use to manage the server, lint the code, run test and more. Check the `package.json` file for more information.*
+
+### Starting development browser ui (Angular)
+```bash
+npm run serve:pwa
+```
+
+*Note: The browser ui will be running on `localhost:4200` by default. You can change the port by editing the `angular.json` file.*
+
+### Build production browser ui (Angular)
+```bash
+npm run build:pwa
+```
+
+### Starting development desktop ui (Electron)
+```bash
+npm run start:desktop
+```
+*Note: The desktop ui application will be running on your machine. You can change the config by editing the `electron-builder.json` file.*
+
+### Build production desktop ui (Electron)
+```bash
+npm run make:desktop
+```
+
+*Note: The desktop ui application will be build in the `dist/packages` directory. You can change the config by editing the `electron-builder.json` file.*
 
 ## Contributing
 Contributions are welcome and appreciated. To contribute to this project, please fork the repository, create a new branch and submit a pull request. For major changes, please open an issue first to discuss what you would like to change.
