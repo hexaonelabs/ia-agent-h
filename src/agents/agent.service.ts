@@ -40,6 +40,7 @@ export class AgentService {
   private readonly inMemoryThreadsMesssages: Record<string, string[]> = {};
   private readonly _logger = new CustomLogger(AgentService.name);
   constructor(private _taskSchedulerService: TaskSchedulerService) {
+    this._taskSchedulerService.setExecuter(this.sendMessage.bind(this));
     this._client = new OpenAI();
     this.startAgents();
     this._taskSchedulerService.setExecuter(this.sendMessage.bind(this));
