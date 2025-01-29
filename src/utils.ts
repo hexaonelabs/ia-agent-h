@@ -4,6 +4,8 @@ import * as p from 'path';
 import { arbitrum, mainnet, sepolia } from 'viem/chains';
 import { TaskSchedulerService } from './server/task-scheduler.service';
 import OpenAI from 'openai';
+import { z } from 'zod';
+import { DynamicStructuredTool, tool } from '@langchain/core/tools';
 
 export interface ToolConfig<T = any> {
   definition: {
@@ -131,6 +133,7 @@ export const getAssistantConfig = (
 };
 
 /**
+ * @deprecated Use getDynamicStructuredTools instead. Will be removed
  * Function that returns the assistant tools function from the assistant file name
  * @param assistantFileName
  * @returns
@@ -142,6 +145,24 @@ export const getAssistantToolsFunction = async (assistantFileName: string) => {
   await Promise.all(
     toolsNames.map(async (name) => {
       const tool = await yamlToToolParser(`${toCamelCase(name)}.yml`);
+      tools.push(tool);
+    }),
+  );
+  return tools;
+};
+
+/**
+ * Function that returns the assistant tools function from the assistant file name
+ */
+export const getDynamicStructuredTools = async (assistantFileName: string) => {
+  const { Tools } = getAssistantConfig(assistantFileName);
+  const toolsNames = Tools?.map(({ Name }) => Name) || [];
+  const tools: DynamicStructuredTool[] = [];
+  await Promise.all(
+    toolsNames.map(async (name) => {
+      const tool = await yamlToDynamicStructuredToolParser(
+        `${toCamelCase(name)}.yml`,
+      );
       tools.push(tool);
     }),
   );
@@ -177,6 +198,7 @@ export const getAssistantCtrl = async (
 };
 
 /**
+ * @deprecated Use yamlToDynamicStructuredToolParser() instead. Will be removed.
  * Function that returns the tool config object from the assistant file name
  * @param fileName
  * @returns
@@ -234,6 +256,55 @@ export const yamlToToolParser = async (
     definition: functionDefinition,
     handler: functionHandler,
   };
+};
+
+/**
+ * Function that returns the dynamic structured tool from the assistant file name
+ * @param fileName
+ * @returns
+ */
+export const yamlToDynamicStructuredToolParser = async (
+  fileName: string,
+): Promise<DynamicStructuredTool> => {
+  const normalizedName = fileName.includes('Tool')
+    ? fileName
+    : `${fileName.split('.yml')[0]}Tool`;
+  const filePath = p.join(
+    process.cwd(),
+    'tools',
+    normalizedName.endsWith('.yml') ? normalizedName : `${normalizedName}.yml`,
+  );
+  const fileContents = fs.readFileSync(filePath, 'utf8');
+  const data: YamlTool = yaml.load(fileContents) as YamlTool;
+  const importPath = `./tools/${data.Handler.includes('/') ? data.Handler.split('/').pop() : data.Handler}`;
+
+  // load handler function from file
+  const functionHandler = await import(importPath).then((module) => {
+    return module[data.Handler.split('/').pop()];
+  });
+  // build definition object
+  // add args as params with dynamic structure using zod
+  const schema = z.object(
+    data?.Args?.reduce(
+      (acc, { Name, Required, Items, Type, ...arg }) => {
+        acc[Name] = z[Type || 'string']().describe(arg.Description || '');
+        if (!Required) {
+          acc[Name] = acc[Name].optional();
+        }
+        if (Items) {
+          acc[Name] = acc[Name].array();
+        }
+        return acc;
+      },
+      {} as Record<string, any>,
+    ),
+  );
+  // return tool config object with definition & handler
+  return tool(functionHandler, {
+    name: data.Name,
+    description: data.Description,
+    schema,
+  });
 };
 
 /**

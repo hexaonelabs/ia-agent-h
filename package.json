@@ -57,6 +57,7 @@
     "@google-cloud/local-auth": "^3.0.1",
     "@ionic/angular": "^8.4.1",
     "@lancedb/lancedb": "^0.15.0-beta.0",
+    "@langchain/langgraph": "^0.2.43",
     "@langchain/openai": "^0.4.2",
     "@nestjs/common": "^10.0.0",
     "@nestjs/config": "^3.3.0",
@@ -89,6 +90,7 @@
     "twitter-api-v2": "^1.19.0",
     "uuid": "^11.0.5",
     "viem": "^2.22.4",
+    "zod": "^3.24.1",
     "zone.js": "~0.14.0"
   },
   "devDependencies": {
