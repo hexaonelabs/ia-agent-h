@@ -25,6 +25,7 @@ import { resolve } from 'path';
 import { existsSync, readFileSync } from 'fs';
 import { Document } from '@langchain/core/documents';
 import * as pdf from 'pdf-parse';
+import { InMemoryChatMessageHistory } from '@langchain/core/chat_history';
 
 export enum TEMPLATES {
   BASIC_CHAT_TEMPLATE = `You are an expert software engineer, give concise response.
@@ -69,7 +70,7 @@ export class LangchainChatService {
       const response = await chain.invoke({
         input,
       });
-      return this.successResponse(response);
+      return await this.successResponse(input, response);
     } catch (e: unknown) {
       this.exceptionHandling(e);
     }
@@ -90,13 +91,17 @@ export class LangchainChatService {
         chat_history: formattedPreviousMessages.join('\n'),
         input: currentMessageContent,
       });
-      return this.successResponse(response);
+      return await this.successResponse(
+        currentMessageContent,
+        response,
+        formattedPreviousMessages,
+      );
     } catch (e: unknown) {
       this.exceptionHandling(e);
     }
   }
 
-  async documentChat(query: string) {
+  async documentChat(query: string, chat_history = []) {
     try {
       const documentContext = await this.db.search(query);
       const chain = this.loadSingleChain(
@@ -107,7 +112,12 @@ export class LangchainChatService {
         context: JSON.stringify(documentContext),
         question: query,
       });
-      return this.successResponse(response);
+      const successResponse = await this.successResponse(
+        query,
+        response,
+        chat_history,
+      );
+      return successResponse;
     } catch (e: unknown) {
       this.exceptionHandling(e);
     }
@@ -236,13 +246,31 @@ export class LangchainChatService {
       ? new HumanMessage({ content: message.content, additional_kwargs: {} })
       : new AIMessage({ content: message.content, additional_kwargs: {} });
 
-  private successResponse = (response: Uint8Array) => ({
-    statusCode: HttpStatus.OK,
-    message: 'success',
-    data: Object.values(response)
+  private successResponse = async (
+    query: string,
+    response: Uint8Array,
+    chat_history = [],
+  ) => {
+    const answer = Object.values(response)
       .map((code) => String.fromCharCode(code))
-      .join(''),
-  });
+      .join('')
+      .trim();
+    // build output
+    const history = new InMemoryChatMessageHistory();
+    await history.addMessage(new HumanMessage(query));
+    await history.addMessage(new AIMessage(answer));
+    const messages = await history.getMessages();
+    chat_history.push(...messages);
+    // return response
+    return {
+      statusCode: HttpStatus.OK,
+      message: 'success',
+      data: {
+        answer,
+        chat_history,
+      },
+    };
+  };
 
   private exceptionHandling = (e: unknown) => {
     Logger.error(e);
