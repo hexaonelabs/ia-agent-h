@@ -33,8 +33,8 @@ export class XAgent {
 
   private readonly _logger = new CustomLogger(XAgent.name);
 
-  constructor(client: OpenAI) {
-    this._client = client;
+  constructor() {
+    this._client = new OpenAI();
     this._logger.log(`🏗  Building Twitter client...`);
     this._xClient = new TwitterApi({
       appKey: process.env.TWITTER_APP_KEY,
@@ -67,7 +67,8 @@ export class XAgent {
   }
 
   private async _mentionsMonitoring() {
-    const TIMEOUT = 60 * 15 * 1000;
+    // 12h timout
+    const TIMEOUT = 12 * 60 * 60 * 1000;
     const delay = (ms: number) =>
       new Promise((resolve) => setTimeout(resolve, ms));
     let t;
@@ -144,6 +145,7 @@ export class XAgent {
         // loop over mentions
         for (const mention of mentions) {
           this._logger.log(`🛎 Found Mention with post ID: ${mention.id}`);
+          this._logger.log(`🧠 Generating tweet response to mention...`);
           const response = await this._generateResponse(mention.text);
           this._logger.log(
             `📣 Responding to mention ID ${mention.id}: ${response}`,
@@ -191,7 +193,7 @@ export class XAgent {
     prompt: string,
     role: 'user' | 'system' = 'user',
   ): Promise<string> {
-    // disable logging on development mode
+    // disable on development mode
     if (process.env.NODE_ENV !== 'production') {
       return;
     }
@@ -237,7 +239,8 @@ export class XAgent {
   }
 
   private async _searchForNewAccountsToConnectWith() {
-    const TIMEOUT = 6 * 60 * 1000;
+    // 24h timout
+    const TIMEOUT = 24 * 60 * 60 * 1000;
     try {
       const response = await this._xClient.v2.search({
         query: `crypto OR blockchain OR NFT OR DeFi OR Web3 -is:retweet -is:reply -has:hashtags`,
@@ -299,7 +302,8 @@ export class XAgent {
       return;
     }
     try {
-      // disable logging on development mode
+      // disable on development mode
+      this._logger.log(`🌞 Saying Good Morning is disable on development mode`);
       if (process.env.NODE_ENV !== 'production') {
         return;
       }

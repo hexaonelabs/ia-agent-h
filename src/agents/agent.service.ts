@@ -32,6 +32,7 @@ export class AgentService {
       tools: ToolConfig<any>[];
       ctrl: {
         start: () => Promise<void>;
+        stop?: () => Promise<void>;
       };
     }
   > = {};
@@ -41,16 +42,39 @@ export class AgentService {
   constructor(private _taskSchedulerService: TaskSchedulerService) {
     this._taskSchedulerService.setExecuter(this.sendMessage.bind(this));
     this._client = new OpenAI();
-    this._createAssistant(this._client, 'agent-h')
-      .then(async ({ assistant, tools }) => {
-        this._agent = {
-          assistant,
-          tools,
-        };
-      })
-      .then(async () => {
-        await this._manageAgents();
-      });
+    this.startAgents();
+    this._taskSchedulerService.setExecuter(this.sendMessage.bind(this));
+  }
+
+  async startAgents() {
+    // create main agent
+    const { assistant, tools } = await this._createAssistant(
+      this._client,
+      'agent-h',
+    );
+    // stage main agent
+    this._agent = {
+      assistant,
+      tools,
+    };
+    // init all others agents
+    await this._manageAgents();
+  }
+
+  async restartAgents() {
+    this._logger.log('Restarting agents...');
+    // stop all agents
+    await Promise.all(
+      Object.values(this._managedAgents)
+        .filter((agent) => agent?.ctrl?.stop)
+        .map((agent) => agent.ctrl.stop()),
+    );
+    // remove all agents
+    this._managedAgents = {};
+    // stop main agent
+    this._agent = undefined;
+    // start all agents
+    await this.startAgents();
   }
 
   async createThread() {
@@ -144,13 +168,22 @@ export class AgentService {
     const toolsDefinition = Object.values(tools).map((tool) => tool.definition);
     const toolsName = toolsDefinition.map((t) => t.function.name);
     this._logger.log(`🤖 Creating assistant: ${name}`);
-    this._logger.log(`🤖 Add tool to ${name}: ${JSON.stringify(toolsName)}`);
+    this._logger.log(
+      `⚒️ Add tool to assistant ${name}:\n${toolsName
+        .map((t) => {
+          return `- ${t}`;
+        })
+        .join('\n')}`.trimStart(),
+    );
     const assistant = await client.beta.assistants.create({
       model: 'gpt-4o-mini',
       name,
       instructions,
       tools: toolsDefinition,
     });
+    this._logger.log(
+      `✅ Assistant ${assistant.name} created with ${tools.length} tools`,
+    );
     return {
       assistant,
       tools,
@@ -337,13 +370,17 @@ export class AgentService {
   private async _manageAgents() {
     await new Promise((resolve) => setTimeout(resolve, 2500)); // Wait 2.5 seconds
     // load all files characters in the agents folder to get all files name
-    this._logger.log(`🤖 Loding assistant from 'charateres/{FILE_NAME}.yml`);
+    this._logger.log(
+      `🤖 Loding more assistants from 'charateres/{FILE_NAME}.yml`,
+    );
     const agentsFileName = getAssistantsFileName();
     if (agentsFileName.length === 0) {
-      this._logger.log('🤖 No other assistant found');
+      this._logger.log('🤖 No more assistant found');
       return;
     }
-    this._logger.log(`🤖 Assistants enabled: ${agentsFileName.join(', ')}`);
+    this._logger.log(
+      `🤖 Others assistants enabled:\n${agentsFileName.map((a) => `-${a}`).join('\n')}`,
+    );
     // loop over the files name to get the assistant config
     agentsFileName.forEach(async (fileName) => {
       try {
@@ -356,9 +393,9 @@ export class AgentService {
         // start agent befor store it
         if (ctrl) {
           await ctrl?.start(); // start the agent controller
+          this._logger.log(`✅  ${fileName} Assistant controler started`);
         }
         this._managedAgents[fileName] = agent;
-        this._logger.log(`🤖 Assistant ${fileName} started`);
       } catch (error) {
         this._logger.error(
           `🤖 Assistant ${fileName} error: ${error?.message ? error?.message : ''}`,

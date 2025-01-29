@@ -32,6 +32,20 @@
                   "with": "platforms/browser/environments/environment.production.ts"
                 }
               ]
+            },
+            "desktop-production": {
+              "aot": true,
+              "extractLicenses": true,
+              "namedChunks": false,
+              "optimization": true,
+              "outputHashing": "all",
+              "sourceMap": false,
+              "fileReplacements": [
+                {
+                  "replace": "platforms/browser/environments/environment.ts",
+                  "with": "platforms/browser/environments/environment.desktop-production.ts"
+                }
+              ]
             }
           },
           "options": {

@@ -1,0 +1,15 @@
+Name: send_post_to_x_tool
+Description: Send message with optional media IDs to X social media
+Handler: tools/sendPostToX
+Args: 
+  - Name: message
+    Description: The message to send
+    Required: true
+    Type: string
+
+  - Name: media_ids
+    Description: The media IDs to attach to the message
+    Required: false
+    Type: array
+    Items:
+      Type: string

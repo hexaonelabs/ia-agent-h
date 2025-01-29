@@ -52,6 +52,7 @@ agents.config.yml
 public/images/h-medias/*
 *.production.*
 *.development.*
+*.desktop-production.*
 
 # temp directory
 .temp

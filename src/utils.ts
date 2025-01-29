@@ -3,6 +3,7 @@ import * as yaml from 'js-yaml';
 import * as p from 'path';
 import { arbitrum, mainnet, sepolia } from 'viem/chains';
 import { TaskSchedulerService } from './server/task-scheduler.service';
+import OpenAI from 'openai';
 
 export interface ToolConfig<T = any> {
   definition: {
@@ -26,7 +27,7 @@ export interface ToolConfig<T = any> {
   ) => Promise<any>;
 }
 
-interface Arg {
+export interface ToolsArg {
   Name: string;
   Description: string;
   Required: boolean;
@@ -36,11 +37,11 @@ interface Arg {
   Items?: any;
 }
 
-interface YamlData {
+export interface YamlTool {
   Name: string;
   Description: string;
   Handler: string;
-  Args: Arg[];
+  Args: ToolsArg[];
 }
 
 // replace `_` & `-` by convert to camel case
@@ -73,6 +74,30 @@ export const getAssistantsFileName = () => {
   return enabledFilesName;
 };
 
+export const getAllAssistantsFileName = () => {
+  const filePath = p.join(process.cwd(), 'characters');
+  const files = fs.readdirSync(filePath);
+  const filesName = files
+    .filter((file) => file.includes('.yml'))
+    .map((file) => file.split('.yml')[0]);
+  return filesName;
+};
+
+export const getAllTools = () => {
+  const filePath = p.join(process.cwd(), 'tools');
+  const files = fs.readdirSync(filePath);
+  const filesName = files
+    .filter((file) => file.includes('.yml'))
+    .map((file) => file.split('.yml')[0]);
+  const tools: YamlTool[] = [];
+  for (const file of filesName) {
+    const fileContent = fs.readFileSync(`${filePath}/${file}.yml`, 'utf-8');
+    const tool = yaml.load(fileContent) as any;
+    tools.push(tool);
+  }
+  return tools;
+};
+
 /**
  * Function that returns the assistant config object from the assistant file name
  * @param assistantFileName
@@ -84,10 +109,13 @@ export const getAssistantConfig = (
   Name: string;
   Enabled: boolean;
   Description: string;
+  Personality: string;
+  Roleplay: string;
+  Skills: string;
+  Mission: string;
   Instructions: string;
   Tools: {
     Name: string;
-    type: string;
   }[];
   Ctrl: string | undefined;
 } => {
@@ -99,15 +127,7 @@ export const getAssistantConfig = (
       : assistantFileName,
   );
   const fileContent = fs.readFileSync(filePath, 'utf-8');
-  const {
-    Name,
-    Enabled,
-    Description,
-    Instructions,
-    Tools,
-    Ctrl = undefined,
-  } = yaml.load(fileContent) as any;
-  return { Name, Enabled, Description, Instructions, Tools, Ctrl };
+  return yaml.load(fileContent) as any;
 };
 
 /**
@@ -173,7 +193,7 @@ export const yamlToToolParser = async (
     normalizedName.endsWith('.yml') ? normalizedName : `${normalizedName}.yml`,
   );
   const fileContents = fs.readFileSync(filePath, 'utf8');
-  const data: YamlData = yaml.load(fileContents) as YamlData;
+  const data: YamlTool = yaml.load(fileContents) as YamlTool;
   const importPath = `./tools/${data.Handler.includes('/') ? data.Handler.split('/').pop() : data.Handler}`;
 
   // load handler function from file
@@ -223,51 +243,51 @@ export const yamlToToolParser = async (
  */
 export const getAssistantPrompt = async (fileName: string = 'agent-h.yml') => {
   // load file content from `characters/name.yml` file
-  const { Name, Description, Instructions, Tools } =
-    getAssistantConfig(fileName);
+  const {
+    Name,
+    Description,
+    Instructions,
+    Tools,
+    Mission,
+    Personality,
+    Roleplay,
+    Skills,
+  } = getAssistantConfig(fileName);
 
   // get all tools names, group by type & normalize to camel case
-  const readToolsNames =
-    Tools?.filter(({ type }) => type === 'read')
-      ?.map(({ Name }) => Name)
-      .filter(Boolean) || [];
-  const readToolsFilesPath = readToolsNames.map(
-    (name) => `${toCamelCase(name)}.yml`,
-  );
-  const writeToolsNames =
-    Tools?.filter(({ type }) => type === 'write')
-      ?.map(({ Name }) => Name)
-      .filter(Boolean) || [];
-  const writeToolsFilesPath = writeToolsNames.map(
-    (name) => `${toCamelCase(name)}.yml`,
-  );
+  const toolsNames = Tools?.map(({ Name }) => Name).filter(Boolean) || [];
+  const toolsFilesPath = toolsNames.map((name) => `${toCamelCase(name)}.yml`);
   // load all tools from yaml files
-  const readTools = [];
+  const tools = [];
   await Promise.all(
-    readToolsFilesPath.map(async (filePath) => {
+    toolsFilesPath.map(async (filePath) => {
       const { definition: tool } = await yamlToToolParser(filePath);
-      readTools.push(tool);
-    }),
-  );
-  const writeTools = [];
-  await Promise.all(
-    writeToolsFilesPath.map(async (filePath) => {
-      const { definition: tool } = await yamlToToolParser(filePath);
-      writeTools.push(tool);
+      tools.push(tool);
     }),
   );
   // build prompt string text
-  const assistantPrompt = `# ${Name}
+  const assistantPrompt = `# You are ${Name}
+
+## Description:
 ${Description}
 
-${[...readTools, ...writeTools].length > 0 ? 'To acompish this mission you have access & you can perform allo these tools to execute multiples operations:' : ''}  
-${readTools.length > 0 ? '## 1 READ OPERATIONS:' : ''}
-${readTools.length > 0 ? readTools.map((tool) => `- "${tool.function.name}": ${tool.function.description}`).join('\n') : ''}
+## Personality:
+${Personality}
 
-${writeTools.length > 0 ? '## 2 WRITE OPERATIONS:' : ''}
-${writeTools.length > 0 ? writeTools.map((tool) => `- "${tool.function.name}": ${tool.function.description}`).join('\n') : ''}
+## Roleplay:
+${Roleplay}
 
-${Instructions ? '# INSTRUCTIONS:' : ''}
+## Skills: 
+${Skills}
+
+## Mission:
+${Mission}
+
+${tools.length > 0 ? 'To acompish this mission you have access & you can perform allo these tools to execute multiples actions:' : ''}  
+${tools.length > 0 ? '## TOOLS ACTION LIST CAPABILITIES:' : ''}
+${tools.length > 0 ? tools.map((tool) => `- "${tool.function.name}": ${tool.function.description}`).join('\n') : ''}
+
+${Instructions ? '## INSTRUCTIONS:' : ''}
 ${Instructions ? Instructions : ''}`;
   // return prompt string text
   return assistantPrompt;
@@ -282,4 +302,18 @@ export const getNetworkByName = (network: string) => {
     default:
       return sepolia;
   }
+};
+
+export const convertJSONToYAML = (json: any) => {
+  return yaml.dump(json);
+};
+
+export const createEmbedding = async (input: string) => {
+  const openai = new OpenAI();
+  const embedding = await openai.embeddings.create({
+    model: 'text-embedding-3-small',
+    encoding_format: 'float',
+    input,
+  });
+  return embedding;
 };
