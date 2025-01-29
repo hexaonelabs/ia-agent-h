@@ -26,6 +26,8 @@ import { existsSync, readFileSync } from 'fs';
 import { Document } from '@langchain/core/documents';
 import * as pdf from 'pdf-parse';
 import { InMemoryChatMessageHistory } from '@langchain/core/chat_history';
+import { MemorySaver } from '@langchain/langgraph';
+import { getDynamicStructuredTools } from 'src/utils';
 
 export enum TEMPLATES {
   BASIC_CHAT_TEMPLATE = `You are an expert software engineer, give concise response.
@@ -44,6 +46,8 @@ export enum TEMPLATES {
    
    Question: {question}`,
 }
+// Initialize memory to persist state between graph runs
+const agentCheckpointer = new MemorySaver();
 
 export interface VercelChatMessage {
   role: string;
@@ -179,7 +183,8 @@ export class LangchainChatService {
 
   async agentChat(contextAwareMessagesDto: { messages: VercelChatMessage[] }) {
     try {
-      const tools = [];
+      const tools = await getDynamicStructuredTools('agent-h');
+      // const toolNode = new ToolNode(tools);
       const messages = contextAwareMessagesDto.messages ?? [];
       const formattedPreviousMessages = messages
         .slice(0, -1)
@@ -249,13 +254,16 @@ export class LangchainChatService {
 
   private successResponse = async (
     query: string,
-    response: Uint8Array,
+    response: string | Uint8Array,
     chat_history = [],
   ) => {
-    const answer = Object.values(response)
-      .map((code) => String.fromCharCode(code))
-      .join('')
-      .trim();
+    let answer = response as string;
+    if (response instanceof Uint8Array) {
+      answer = Object.values(response)
+        .map((code) => String.fromCharCode(code))
+        .join('')
+        .trim();
+    }
     // build output
     const history = new InMemoryChatMessageHistory();
     await history.addMessage(new HumanMessage(query));
