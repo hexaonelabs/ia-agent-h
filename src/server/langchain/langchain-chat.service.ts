@@ -215,11 +215,12 @@ export class LangchainChatService {
         input: currentMessageContent,
         chat_history: formattedPreviousMessages,
       });
-      return {
-        statusCode: HttpStatus.OK,
-        message: 'Success',
-        data: response.output,
-      };
+      const successResponse = await this.successResponse(
+        currentMessageContent,
+        response.output,
+        formattedPreviousMessages,
+      );
+      return successResponse;
     } catch (e: unknown) {
       this.exceptionHandling(e);
     }
