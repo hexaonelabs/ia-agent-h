@@ -180,8 +180,6 @@ export class LangchainChatService {
   async agentChat(contextAwareMessagesDto: { messages: VercelChatMessage[] }) {
     try {
       const { supervisor } = await buildTeamOfAgents();
-      console.log('supervisor', supervisor);
-
       // extract messages
       const messages = contextAwareMessagesDto.messages ?? [];
       const formattedPreviousMessages = messages
