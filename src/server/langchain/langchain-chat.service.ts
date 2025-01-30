@@ -5,20 +5,11 @@ import {
   Injectable,
   Logger,
 } from '@nestjs/common';
-// import { BasicMessageDto } from './dtos/basic-message.dto';
 import { PromptTemplate } from '@langchain/core/prompts';
 import { ChatOpenAI } from '@langchain/openai';
 import { HttpResponseOutputParser } from 'langchain/output_parsers';
-// import { DocumentDto } from './dtos/document.dto';
-// import { PDF_BASE_PATH } from 'src/utils/constants/common.constants';
-// import { TavilySearchResults } from '@langchain/community/tools/tavily_search';
-import { AgentExecutor, createOpenAIFunctionsAgent } from 'langchain/agents';
+import { AgentExecutor } from 'langchain/agents';
 import { RecursiveCharacterTextSplitter } from 'langchain/text_splitter';
-
-import {
-  ChatPromptTemplate,
-  MessagesPlaceholder,
-} from '@langchain/core/prompts';
 import { initDB } from '../../rag';
 import { AIMessage, HumanMessage } from '@langchain/core/messages';
 import { resolve } from 'path';
@@ -26,8 +17,13 @@ import { existsSync, readFileSync } from 'fs';
 import { Document } from '@langchain/core/documents';
 import * as pdf from 'pdf-parse';
 import { InMemoryChatMessageHistory } from '@langchain/core/chat_history';
-import { MemorySaver } from '@langchain/langgraph';
-import { getDynamicStructuredTools } from 'src/utils';
+import {
+  callbacks,
+  createSpecializedAgent,
+  createSupervisorAgent,
+  getAssistantCtrl,
+  getAssistantsFileName,
+} from '../../utils';
 
 export enum TEMPLATES {
   BASIC_CHAT_TEMPLATE = `You are an expert software engineer, give concise response.
@@ -47,7 +43,7 @@ export enum TEMPLATES {
    Question: {question}`,
 }
 // Initialize memory to persist state between graph runs
-const agentCheckpointer = new MemorySaver();
+// const agentCheckpointer = new MemorySaver();
 
 export interface VercelChatMessage {
   role: string;
@@ -183,43 +179,25 @@ export class LangchainChatService {
 
   async agentChat(contextAwareMessagesDto: { messages: VercelChatMessage[] }) {
     try {
-      const tools = await getDynamicStructuredTools('agent-h');
-      // const toolNode = new ToolNode(tools);
+      const { supervisor } = await buildTeamOfAgents();
+      console.log('supervisor', supervisor);
+
+      // extract messages
       const messages = contextAwareMessagesDto.messages ?? [];
       const formattedPreviousMessages = messages
         .slice(0, -1)
         .map(this.formatBaseMessages);
+      // get current message
       const currentMessageContent = messages[messages.length - 1].content;
-      const prompt = ChatPromptTemplate.fromMessages([
-        [
-          'system',
-          'You are an agent that follows SI system standards and responds responds normally',
-        ],
-        new MessagesPlaceholder({ variableName: 'chat_history' }),
-        ['user', '{input}'],
-        new MessagesPlaceholder({ variableName: 'agent_scratchpad' }),
-      ]);
-
-      const llm = new ChatOpenAI({
-        temperature: 0.7,
-        modelName: 'gpt-3.5-turbo',
-        n: 1,
-        maxTokens: 100,
-      });
-      const agent = await createOpenAIFunctionsAgent({
-        llm,
-        tools,
-        prompt,
-      });
-      const agentExecutor = new AgentExecutor({
-        agent,
-        tools,
-        memory: undefined,
-      });
-      const response = await agentExecutor.invoke({
-        input: currentMessageContent,
-        chat_history: formattedPreviousMessages,
-      });
+      // invoke supervisor agent
+      const response = await supervisor.invoke(
+        {
+          input: currentMessageContent,
+          chat_history: formattedPreviousMessages,
+        },
+        { callbacks },
+      );
+      // build response and return
       const successResponse = await this.successResponse(
         currentMessageContent,
         response.output,
@@ -289,4 +267,70 @@ export class LangchainChatService {
       e,
     );
   };
+}
+
+async function buildTeamOfAgents() {
+  const team: {
+    agents: Record<
+      string,
+      {
+        agent: AgentExecutor;
+        ctrl?: {
+          start: () => Promise<void>;
+          stop?: () => Promise<void>;
+        };
+      }
+    >;
+    supervisor: AgentExecutor;
+  } = {
+    agents: {},
+    supervisor: undefined,
+  };
+  // create supervisor agent
+  try {
+    const supervisorAgent = await createSupervisorAgent(
+      Object.values(team.agents)
+        .map((a) => a.agent)
+        .reduce((acc, a) => {
+          acc[a.name] = a;
+          return acc;
+        }, {}),
+    );
+    team.supervisor = supervisorAgent;
+  } catch (e) {
+    console.error(
+      `❌ Create Supervisor Assistant error: ${e?.message ? e?.message : ''}`,
+    );
+  }
+  // search for specialized agents
+  const agentsFileName = getAssistantsFileName();
+  // return if no agents found
+  if (!agentsFileName) {
+    return team;
+  }
+  // else create specialized agents
+  try {
+    if (agentsFileName.length === 0) {
+      console.log('🤖 No more assistant found');
+      return team;
+    }
+    console.log(
+      `🤖 Others assistants enabled:\n${agentsFileName.map((a) => `-${a}`).join('\n')}`,
+    );
+    for (const fileName of agentsFileName) {
+      const agent = await createSpecializedAgent(fileName);
+      const ctrl = await getAssistantCtrl(fileName);
+      // start agent befor store it
+      if (ctrl) {
+        await ctrl?.start(); // start the agent controller
+        console.log(`✅  ${agent} Assistant controler started`);
+      }
+      team.agents[fileName] = { agent, ctrl };
+    }
+  } catch (e) {
+    console.error(
+      `❌ Create Specialized Assistant error: ${e?.message ? e?.message : ''}`,
+    );
+  }
+  return team;
 }

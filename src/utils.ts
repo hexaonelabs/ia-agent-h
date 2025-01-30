@@ -6,6 +6,12 @@ import { TaskSchedulerService } from './server/task-scheduler.service';
 import OpenAI from 'openai';
 import { z } from 'zod';
 import { DynamicStructuredTool, tool } from '@langchain/core/tools';
+import {
+  ChatPromptTemplate,
+  MessagesPlaceholder,
+} from '@langchain/core/prompts';
+import { ChatOpenAI } from '@langchain/openai';
+import { AgentExecutor, createOpenAIFunctionsAgent } from 'langchain/agents';
 
 export interface ToolConfig<T = any> {
   definition: {
@@ -329,10 +335,10 @@ export const getAssistantPrompt = async (fileName: string = 'agent-h.yml') => {
   const toolsNames = Tools?.map(({ Name }) => Name).filter(Boolean) || [];
   const toolsFilesPath = toolsNames.map((name) => `${toCamelCase(name)}.yml`);
   // load all tools from yaml files
-  const tools = [];
+  const tools: DynamicStructuredTool[] = [];
   await Promise.all(
     toolsFilesPath.map(async (filePath) => {
-      const { definition: tool } = await yamlToToolParser(filePath);
+      const tool = await yamlToDynamicStructuredToolParser(filePath);
       tools.push(tool);
     }),
   );
@@ -356,7 +362,7 @@ ${Mission}
 
 ${tools.length > 0 ? 'To acompish this mission you have access & you can perform allo these tools to execute multiples actions:' : ''}  
 ${tools.length > 0 ? '## TOOLS ACTION LIST CAPABILITIES:' : ''}
-${tools.length > 0 ? tools.map((tool) => `- "${tool.function.name}": ${tool.function.description}`).join('\n') : ''}
+${tools.length > 0 ? tools.map((tool) => `- "${tool.name}": ${tool.description}`).join('\n') : ''}
 
 ${Instructions ? '## INSTRUCTIONS:' : ''}
 ${Instructions ? Instructions : ''}`;
@@ -365,7 +371,7 @@ ${Instructions ? Instructions : ''}`;
 };
 
 export const getNetworkByName = (network: string) => {
-  switch (network) {
+  switch (network.toLowerCase()) {
     case 'mainnet':
       return mainnet;
     case 'arbitrum':
@@ -392,3 +398,160 @@ export const createEmbedding = async (
   });
   return embedding;
 };
+
+export async function createSpecializedAgent(fileName: string) {
+  const promptTemmplate = await getAssistantPrompt(fileName);
+  const tools = await getDynamicStructuredTools(fileName);
+  const prompt = ChatPromptTemplate.fromMessages([
+    [
+      'system',
+      `${promptTemmplate}
+      Always use your tools to complete tasks. 
+      If you cannot complete a task, explain why and what additional information you need.`,
+    ],
+    new MessagesPlaceholder({ variableName: 'chat_history' }),
+    ['human', '{input}'],
+    new MessagesPlaceholder({ variableName: 'agent_scratchpad' }),
+  ]);
+
+  const llm = new ChatOpenAI({
+    temperature: 0.7,
+    modelName: 'gpt-3.5-turbo',
+    n: 1,
+    maxTokens: 100,
+  });
+
+  const agent = await createOpenAIFunctionsAgent({
+    llm,
+    tools,
+    prompt,
+  });
+
+  return new AgentExecutor({
+    agent,
+    tools,
+    memory: undefined,
+  });
+}
+
+export async function createSupervisorAgent(teamAgents: {
+  [key: string]: AgentExecutor;
+}) {
+  const supervisorTools = await Promise.all(
+    Object.entries(teamAgents).map(async ([name, agent]) => {
+      return new DynamicStructuredTool({
+        name,
+        description: `Use this tool to delegate tasks to ${name}`,
+        schema: z.object({
+          input: z.string().describe(`The task to delegate to ${name}`),
+        }),
+        func: async ({ input }) => {
+          console.log(`Task delegated to ""${name}": ${input}`);
+          const result = await agent.invoke(
+            { input, chat_history: [] },
+            { callbacks },
+          );
+          console.log(`Task completed by "${name}": ${result.output}`);
+          return `${name} response: ${result.output}`;
+        },
+      });
+    }),
+  ).then((tools) => tools || []);
+  // const promptTemmplate = await getAssistantPrompt();
+  const tools = await getDynamicStructuredTools('agent-h.yml');
+  const allTTools = [...tools, ...supervisorTools];
+  // list all tools from each agent to let the supervisor agent
+  // delegate tasks to the specialized agents that can handle them
+  const teamTools = Object.entries(teamAgents).map(([name, agent]) => {
+    return `
+    Agent CV for "${name}":
+    Skills:
+    ${agent.tools.map((tool) => `- ${tool.name}: ${tool.description}`).join('\n')}
+    End of CV for "${name}".
+    `;
+  });
+  const supervisorPrompt = ChatPromptTemplate.fromMessages([
+    [
+      'system',
+      `You are a supervisor agent. Your role is to:
+    1. Always delegate tasks to your specialized agents.
+    2. Wait for their responses to each task before proceeding to the next.
+    3. Summarize and integrate their findings into a final answer.
+    4. Provide a final, comprehensive answer to the user.
+    5. Use the scratchpad to keep track of the conversation and any additional information needed.
+    6. Use the chat history to keep track of the conversation.`.trim(),
+    ],
+    [
+      'system',
+      `Remember the following rules:
+      IMPORTANT: 
+      - Never modify or reinterpret the original input. 
+      - Never postpone or delay tasks. If more information is needed, specify exactly what is required.
+      - Always pass the exact instructions to the specialized agents.
+
+      AND THE MOST IMPORTANT:
+      - Ensure that the specialized agents execute and complete the tasks correctly, otherwise, provide the correct information to them or ask them to re-execute the task.
+      - Always await the response from the specialized agents before proceeding to the next task or providing a final answer.
+      
+      Here are the specialized agents in your team with their skills:
+      ${teamTools.join('\n')}
+    `,
+    ],
+    new MessagesPlaceholder({ variableName: 'chat_history' }),
+    ['human', '{input}'],
+    new MessagesPlaceholder({ variableName: 'agent_scratchpad' }),
+  ]);
+
+  const llm = new ChatOpenAI({
+    temperature: 0.7,
+    modelName: 'gpt-3.5-turbo',
+    n: 1,
+    maxTokens: 100,
+  });
+
+  const supervisorAgent = await createOpenAIFunctionsAgent({
+    llm,
+    tools: allTTools,
+    prompt: supervisorPrompt,
+  });
+  return new AgentExecutor({
+    agent: supervisorAgent,
+    tools: allTTools,
+    memory: undefined,
+  });
+}
+
+export const callbacks = [
+  {
+    handleToolStart: async () => {
+      console.log(`💾 Agent executing tool...`);
+    },
+    handleToolEnd(output) {
+      console.log(`🔧 Agent tool output: ${JSON.stringify({ output })}`);
+    },
+    handleAgentAction(action) {
+      console.log(`🚀  Handling action calls: ${action.log}`);
+    },
+    handleAgentEnd(action) {
+      console.log(
+        `✅ Agent end action: 
+        ${action.log} 
+        ${JSON.stringify(action.returnValues)}
+      `.trim(),
+      );
+    },
+    // handleChainStart(chain, runId) {
+    //   const data = runId;
+    //   // console.log(data);
+    //   if (
+    //     !data.input ||
+    //     !data.input.length ||
+    //     !data?.steps ||
+    //     data.steps.length === 0
+    //   ) {
+    //     return;
+    //   }
+    //   console.log(`🚀 Performing run ${data.input}`);
+    // },
+  },
+];
