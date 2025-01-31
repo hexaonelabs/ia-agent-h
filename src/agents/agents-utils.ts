@@ -186,7 +186,6 @@ export async function buildTeamOfAgents() {
  */
 export async function createSpecializedAgent(fileName: string) {
   console.log('🤖 Creating Specialized agent...');
-  const promptTemmplate = await getAssistantPrompt(fileName);
   console.log(
     `🏗  Build tools for specialized agent: ${fileName.replace('.yml', '')}`,
   );
@@ -197,6 +196,7 @@ export async function createSpecializedAgent(fileName: string) {
   console.log(
     `💬 Configure LLM model: ${LLM_MODEL} with ${TEMP} sampling temperature`,
   );
+  const promptTemmplate = await getAssistantPrompt(fileName);
   const prompt = ChatPromptTemplate.fromMessages([
     [
       'system',
