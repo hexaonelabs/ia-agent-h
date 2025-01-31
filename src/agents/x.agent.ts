@@ -4,7 +4,7 @@ import * as dayjs from 'dayjs';
 import * as fs from 'fs';
 import * as p from 'path';
 import { CustomLogger } from '../logger.service';
-import { getAssistantPrompt } from '../utils';
+import { getAssistantPrompt } from './agents-utils';
 
 export class XAgent {
   private readonly _client: OpenAI;
