@@ -164,7 +164,7 @@ export class LangchainChatController {
     return await this.langchainChatService.documentChat(message);
   }
 
-  // @ApiBearerAuth()
+  @ApiBearerAuth()
   @ApiBody({
     schema: {
       type: 'object',
@@ -195,8 +195,8 @@ export class LangchainChatController {
     type: PromptAPIResponse,
   })
   @ApiResponse({ status: 403, description: 'Forbidden.' })
-  // @UseGuards(EvmAuthGuard)
-  // @UseGuards(TokenHolderGuard)
+  @UseGuards(EvmAuthGuard)
+  @UseGuards(TokenHolderGuard)
   @Post('agent-chat')
   async agentChat(
     @Body() contextAwareMessagesDto: { messages: VercelChatMessage[] },
