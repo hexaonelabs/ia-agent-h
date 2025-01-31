@@ -1,7 +1,6 @@
 import { Module } from '@nestjs/common';
 import { AppController } from './app.controller';
 import { AppService } from './app.service';
-import { AgentService } from '../agents/agent.service';
 import { ConfigModule } from '@nestjs/config';
 import { CustomLogger } from '../logger.service';
 import { JwtModule } from '@nestjs/jwt';
@@ -27,7 +26,6 @@ import { LangchainModule } from './langchain/langchain.module';
   controllers: [AppController],
   providers: [
     AppService,
-    AgentService,
     TaskSchedulerService,
     SseSubjectService,
     CustomLogger,

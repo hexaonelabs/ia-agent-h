@@ -17,13 +17,8 @@ import { existsSync, readFileSync } from 'fs';
 import { Document } from '@langchain/core/documents';
 import * as pdf from 'pdf-parse';
 import { InMemoryChatMessageHistory } from '@langchain/core/chat_history';
-import {
-  callbacks,
-  createSpecializedAgent,
-  createSupervisorAgent,
-  getAssistantCtrl,
-  getAssistantsFileName,
-} from '../../utils';
+import { CustomLogger } from '../../logger.service';
+import { buildTeamOfAgents, callbacks } from '../../agents/agents-utils';
 
 export enum TEMPLATES {
   BASIC_CHAT_TEMPLATE = `You are an expert software engineer, give concise response.
@@ -50,29 +45,79 @@ export interface VercelChatMessage {
   content: string;
 }
 
+export interface DatabaseAdaptator {
+  search: (query: string, table?: string) => Promise<any[]>;
+  save: (data: Document[], table?: string) => Promise<void>;
+}
+
+export interface AgentTeam {
+  agents: Record<
+    string,
+    {
+      agent: AgentExecutor;
+      ctrl?: {
+        start: () => Promise<void>;
+        stop?: () => Promise<void>;
+      };
+    }
+  >;
+  supervisor: AgentExecutor;
+}
+
 @Injectable()
 export class LangchainChatService {
-  db: {
-    search: (query: string, table?: string) => Promise<any[]>;
-    save: (data: Document[], table?: string) => Promise<void>;
-  };
+  private readonly _logger = new CustomLogger(LangchainChatService.name);
+  private _db?: DatabaseAdaptator;
+  private _agentTeam: AgentTeam | null = null;
   constructor() {
-    initDB().then((res) => {
-      this.db = res;
-    });
+    this.startTeam();
+    // this._taskSchedulerService.setExecuter(this.sendMessage.bind(this));
+  }
+
+  async startTeam() {
+    this._logger.log(
+      `ℹ️  Initializing the agents team. This may take a few seconds...`,
+    );
+    this._logger.log(`ℹ️  Connecting to the RAG database....`);
+    // connect RAG database
+    this._db = await initDB();
+    this._logger.log(`ℹ️  Starting the agents team....`);
+    // build team of agents
+    this._agentTeam = await buildTeamOfAgents();
+    this._logger.log(
+      `ℹ️  Open the browser on the UI URL where you host the client. 
+      Otherwise open your browser on the URL: http://localhost:3000 if you are running the client locally.`,
+    );
+    this._logger.log(
+      `ℹ️  You can also use the Swagger UI to test the API endpoints on the URL: http://localhost:3000/api in your browser if you are running the server locally.`,
+    );
+  }
+
+  async restartTeam() {
+    this._logger.log('Restarting agents...');
+    // stop all agents
+    await Promise.all(
+      Object.values(this._agentTeam.agents)
+        .filter((agent) => agent?.ctrl?.stop)
+        .map((agent) => agent.ctrl.stop()),
+    );
+    // remove all agents
+    this._agentTeam = null;
+    // start all agents
+    await this.startTeam();
   }
 
   async basicChat(input: string) {
-    console.log('input', input);
+    this._logger.log('input', input);
 
     try {
-      const chain = this.loadSingleChain(TEMPLATES.BASIC_CHAT_TEMPLATE);
+      const chain = this._loadSingleChain(TEMPLATES.BASIC_CHAT_TEMPLATE);
       const response = await chain.invoke({
         input,
       });
-      return await this.successResponse(input, response);
+      return await this._successResponse(input, response);
     } catch (e: unknown) {
-      this.exceptionHandling(e);
+      this._exceptionHandling(e);
     }
   }
 
@@ -83,43 +128,45 @@ export class LangchainChatService {
       const messages = contextAwareMessagesDto.messages ?? [];
       const formattedPreviousMessages = messages
         .slice(0, -1)
-        .map(this.formatMessage);
+        .map(this._formatMessage);
       const currentMessageContent = messages[messages.length - 1].content;
 
-      const chain = this.loadSingleChain(TEMPLATES.CONTEXT_AWARE_CHAT_TEMPLATE);
+      const chain = this._loadSingleChain(
+        TEMPLATES.CONTEXT_AWARE_CHAT_TEMPLATE,
+      );
       const response = await chain.invoke({
         chat_history: formattedPreviousMessages.join('\n'),
         input: currentMessageContent,
       });
-      return await this.successResponse(
+      return await this._successResponse(
         currentMessageContent,
         response,
         formattedPreviousMessages,
       );
     } catch (e: unknown) {
-      this.exceptionHandling(e);
+      this._exceptionHandling(e);
     }
   }
 
   async documentChat(query: string, chat_history = []) {
     try {
-      const documentContext = await this.db.search(query);
-      const chain = this.loadSingleChain(
+      const documentContext = await this._db.search(query);
+      const chain = this._loadSingleChain(
         TEMPLATES.DOCUMENT_CONTEXT_CHAT_TEMPLATE,
       );
-      console.log('documentContext', documentContext);
+      this._logger.log('documentContext', documentContext);
       const response = await chain.invoke({
         context: JSON.stringify(documentContext),
         question: query,
       });
-      const successResponse = await this.successResponse(
+      const _successResponse = await this._successResponse(
         query,
         response,
         chat_history,
       );
-      return successResponse;
+      return _successResponse;
     } catch (e: unknown) {
-      this.exceptionHandling(e);
+      this._exceptionHandling(e);
     }
   }
 
@@ -140,14 +187,14 @@ export class LangchainChatService {
         };
         return doc;
       });
-      // console.log('PDF parser result', result);
+      // this._logger.log('PDF parser result', result);
       // Split the PDF into texts using RecursiveCharacterTextSplitter
       const textSplitter = new RecursiveCharacterTextSplitter({
         chunkSize: 1000,
         chunkOverlap: 50,
       });
       const texts = await textSplitter.splitDocuments([result]);
-      // console.log('Result texts', texts);
+      // this._logger.log('Result texts', texts);
       let embeddings: Document[] = [];
       for (let index = 0; index < texts.length; index++) {
         const page = texts[index];
@@ -164,27 +211,31 @@ export class LangchainChatService {
           }));
         embeddings = embeddings.concat(pageEmbeddings);
       }
-      await this.db.save(embeddings);
+      await this._db.save(embeddings);
       return {
         statusCode: HttpStatus.OK,
         message: 'success',
         data: 'Document uploaded successfully',
       };
-    } catch (e: unknown) {
-      console.log(e);
-
-      this.exceptionHandling(e);
+    } catch (e: any) {
+      this._logger.log(
+        `❌ Error uploading PDF: ${e?.message ? e.message : JSON.stringify(e)}`,
+      );
+      this._exceptionHandling(e);
     }
   }
 
   async agentChat(contextAwareMessagesDto: { messages: VercelChatMessage[] }) {
     try {
-      const { supervisor } = await buildTeamOfAgents();
+      const { supervisor } = this._agentTeam || {};
+      if (!supervisor) {
+        throw new BadRequestException('Supervisor agent not found.');
+      }
       // extract messages
       const messages = contextAwareMessagesDto.messages ?? [];
       const formattedPreviousMessages = messages
         .slice(0, -1)
-        .map(this.formatBaseMessages);
+        .map((msgs) => this._formatBaseMessages(msgs));
       // get current message
       const currentMessageContent = messages[messages.length - 1].content;
       // invoke supervisor agent
@@ -196,18 +247,18 @@ export class LangchainChatService {
         { callbacks },
       );
       // build response and return
-      const successResponse = await this.successResponse(
+      const _successResponse = await this._successResponse(
         currentMessageContent,
         response.output,
         formattedPreviousMessages,
       );
-      return successResponse;
+      return _successResponse;
     } catch (e: unknown) {
-      this.exceptionHandling(e);
+      this._exceptionHandling(e);
     }
   }
 
-  private loadSingleChain = (template: string) => {
+  private _loadSingleChain = (template: string) => {
     const prompt = PromptTemplate.fromTemplate(template);
 
     const model = new ChatOpenAI({
@@ -220,15 +271,15 @@ export class LangchainChatService {
     return prompt.pipe(model).pipe(outputParser);
   };
 
-  private formatMessage = (message: { role: string; content: string }) =>
+  private _formatMessage = (message: { role: string; content: string }) =>
     `${message.role}: ${message.content}`;
 
-  private formatBaseMessages = (message: { role: string; content: string }) =>
+  private _formatBaseMessages = (message: { role: string; content: string }) =>
     message.role === 'user'
       ? new HumanMessage({ content: message.content, additional_kwargs: {} })
       : new AIMessage({ content: message.content, additional_kwargs: {} });
 
-  private successResponse = async (
+  private _successResponse = async (
     query: string,
     response: string | Uint8Array,
     chat_history = [],
@@ -257,7 +308,7 @@ export class LangchainChatService {
     };
   };
 
-  private exceptionHandling = (e: unknown) => {
+  private _exceptionHandling = (e: unknown) => {
     Logger.error(e);
     throw new HttpException(
       'Internal Server Error',
@@ -265,70 +316,4 @@ export class LangchainChatService {
       e,
     );
   };
-}
-
-async function buildTeamOfAgents() {
-  const team: {
-    agents: Record<
-      string,
-      {
-        agent: AgentExecutor;
-        ctrl?: {
-          start: () => Promise<void>;
-          stop?: () => Promise<void>;
-        };
-      }
-    >;
-    supervisor: AgentExecutor;
-  } = {
-    agents: {},
-    supervisor: undefined,
-  };
-  // create supervisor agent
-  try {
-    const supervisorAgent = await createSupervisorAgent(
-      Object.values(team.agents)
-        .map((a) => a.agent)
-        .reduce((acc, a) => {
-          acc[a.name] = a;
-          return acc;
-        }, {}),
-    );
-    team.supervisor = supervisorAgent;
-  } catch (e) {
-    console.error(
-      `❌ Create Supervisor Assistant error: ${e?.message ? e?.message : ''}`,
-    );
-  }
-  // search for specialized agents
-  const agentsFileName = getAssistantsFileName();
-  // return if no agents found
-  if (!agentsFileName) {
-    return team;
-  }
-  // else create specialized agents
-  try {
-    if (agentsFileName.length === 0) {
-      console.log('🤖 No more assistant found');
-      return team;
-    }
-    console.log(
-      `🤖 Others assistants enabled:\n${agentsFileName.map((a) => `-${a}`).join('\n')}`,
-    );
-    for (const fileName of agentsFileName) {
-      const agent = await createSpecializedAgent(fileName);
-      const ctrl = await getAssistantCtrl(fileName);
-      // start agent befor store it
-      if (ctrl) {
-        await ctrl?.start(); // start the agent controller
-        console.log(`✅  ${agent} Assistant controler started`);
-      }
-      team.agents[fileName] = { agent, ctrl };
-    }
-  } catch (e) {
-    console.error(
-      `❌ Create Specialized Assistant error: ${e?.message ? e?.message : ''}`,
-    );
-  }
-  return team;
 }
