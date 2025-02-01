@@ -1,0 +1,46 @@
+Name: run_ccxt_tick
+Description: Execute a trading tick using the CCXT library
+Handler: tools/runCCXTTick
+Args: 
+  - Name: asset
+    Description: The asset symbol to trade
+    Required: true
+    Type: string
+    Pattern: ^[A-Z]{3,5}$
+
+  - Name: base
+    Description: The base currency symbol
+    Required: true
+    Type: string
+    Pattern: ^[A-Z]{3,5}$
+
+  - Name: allocation
+    Description: The allocation percentage for the trade
+    Required: true
+    Type: number
+    Pattern: ^0(\.[0-9]{1,2})?$|^1(\.0{1,2})?$
+
+  - Name: spread
+    Description: The spread percentage for the trade
+    Required: true
+    Type: number
+    Pattern: ^0(\.[0-9]{1,2})?$|^1(\.0{1,2})?$
+
+  - Name: exchangeId
+    Description: The ID of the exchange to use
+    Required: true
+    Type: string
+    Pattern: ^[a-z0-9]{1,20}$
+
+  - Name: walletAddress
+    Description: The wallet address for the user
+    Required: true
+    Type: string
+    Pattern: ^0x[a-fA-F0-9]{40}$
+
+
+  - Name: privateKey
+    Description: The private key of the wallet (requered for trading)
+    Required: false
+    Type: string
+    Pattern: ^0x[a-fA-F0-9]{64}$

@@ -116,7 +116,7 @@ const tick = async (config: CCXTToolsArgs, exchange: Exchange) => {
   https://docs.ccxt.com/#/exchanges/hyperliquid
   https://github.com/ccxt/ccxt/blob/master/ts/src/test/tests.ts
  */
-export const run = async (config: CCXTToolsArgs) => {
+export const runCCXTTick = async (config: CCXTToolsArgs) => {
   const logger = new CustomLogger('CCXT');
   logger.log(`ℹ️  Initializing v${version} trading bot `);
   if (!config.walletAddress) {
