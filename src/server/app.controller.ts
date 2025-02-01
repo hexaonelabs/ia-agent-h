@@ -36,6 +36,15 @@ export class AppController {
 
   @Get('/ping')
   async test() {
+    // const config: TickConfig = {
+    //   asset: 'BTC',
+    //   base: 'USDC',
+    //   allocation: 0.1,
+    //   spread: 0.1,
+    //   tickInterval: 30 * 1000,
+    // };
+    // const wallet = createViemWalletClient();
+    // await run({ ...config, walletAddress: wallet.account.address });
     return {
       data: 'success',
       success: true,
