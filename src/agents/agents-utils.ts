@@ -30,7 +30,7 @@ export interface AgentToolArgYmlConfig {
   Items?: any;
 }
 
-const LLM_MODEL = 'gpt-3.5-turbo';
+const LLM_MODEL = 'gpt-4o-mini';
 const TEMP = 0.7;
 const console = new CustomLogger('AgentsUtils');
 
@@ -127,6 +127,30 @@ export async function buildTeamOfAgents() {
     supervisor: undefined,
   };
   console.log('🤖 Building team of agents...');
+  // search for specialized agents
+  const agentsFileName = getAssistantsFileName() || [];
+  // else create specialized agents
+  try {
+    if (agentsFileName.length > 0) {
+      console.log(
+        `🤖 Specialized agents enabled:\n${agentsFileName.map((a) => `-${a}`).join('\n')}`,
+      );
+    }
+    for (const fileName of agentsFileName) {
+      const agent = await createSpecializedAgent(fileName);
+      const ctrl = await getAssistantCtrl(fileName);
+      // start agent befor store it
+      if (ctrl) {
+        await ctrl?.start(); // start the agent controller
+        console.log(`✅  ${agent} Assistant controler started`);
+      }
+      team.agents[fileName] = { agent, ctrl };
+    }
+  } catch (e) {
+    console.error(
+      `❌ Create Specialized Assistant error: ${e?.message ? e?.message : ''}`,
+    );
+  }
   // create supervisor agent
   try {
     const supervisorAgent = await createSupervisorAgent(
@@ -141,38 +165,6 @@ export async function buildTeamOfAgents() {
   } catch (e) {
     console.error(
       `❌ Create Supervisor Assistant error: ${e?.message ? e?.message : ''}`,
-    );
-  }
-  // search for specialized agents
-  const agentsFileName = getAssistantsFileName();
-  // return if no agents found
-  if (!agentsFileName) {
-    return team;
-  }
-  // else create specialized agents
-  try {
-    if (agentsFileName.length === 0) {
-      console.log(
-        '✅ No more agent to create. Your AI Agent team is ready to use!',
-      );
-      return team;
-    }
-    console.log(
-      `🤖 Others agents enabled:\n${agentsFileName.map((a) => `-${a}`).join('\n')}`,
-    );
-    for (const fileName of agentsFileName) {
-      const agent = await createSpecializedAgent(fileName);
-      const ctrl = await getAssistantCtrl(fileName);
-      // start agent befor store it
-      if (ctrl) {
-        await ctrl?.start(); // start the agent controller
-        console.log(`✅  ${agent} Assistant controler started`);
-      }
-      team.agents[fileName] = { agent, ctrl };
-    }
-  } catch (e) {
-    console.error(
-      `❌ Create Specialized Assistant error: ${e?.message ? e?.message : ''}`,
     );
   }
   console.log(`✅  Done! Your AI Agent team is ready to use!`);
@@ -216,7 +208,6 @@ export async function createSpecializedAgent(fileName: string) {
     n: 1,
     maxTokens: 100,
   });
-
   const agent = await createOpenAIFunctionsAgent({
     llm,
     tools,
@@ -226,8 +217,10 @@ export async function createSpecializedAgent(fileName: string) {
     agent,
     tools,
     memory: undefined,
+    // returnIntermediateSteps: true,
+    maxIterations: 10,
   });
-  console.log('🎉 Specialized agent created!');
+  executor.name = fileName.replace('.yml', '');
   return executor;
 }
 
@@ -245,22 +238,37 @@ export async function createSupervisorAgent(
   console.log('🤖 Creating Supervisor agent...');
   const supervisorTools = await Promise.all(
     Object.entries(teamAgents).map(async ([name, agent]) => {
-      return new DynamicStructuredTool({
-        name,
-        description: `Use this tool to delegate tasks to ${name}`,
-        schema: z.object({
-          input: z.string().describe(`The task to delegate to ${name}`),
-        }),
-        func: async ({ input }) => {
-          console.log(`Task delegated to ""${name}": ${input}`);
-          const result = await agent.invoke(
-            { input, chat_history: [] },
-            { callbacks },
-          );
-          console.log(`Task completed by "${name}": ${result.output}`);
-          return `${name} response: ${result.output}`;
-        },
+      const schema = z.object({
+        input: z.string().describe(`The task to delegate to ${name}`),
+        context: z.string().optional().describe('The context of the task'),
       });
+      const agentTool = tool(
+        async ({ input, context }) => {
+          console.log(`🦸‍♂️ Task delegated to "${name}": ${input}`);
+          try {
+            const result = await agent.invoke(
+              {
+                name: `delegate_task_to_${name}`,
+                context,
+                input,
+                chat_history: [],
+              },
+              { callbacks },
+            );
+            console.log(`✅ Task completed by "${name}"`);
+            return JSON.stringify(result);
+          } catch (e) {
+            console.error(`❌ Task error by "${name}": ${e.message}`);
+            return `${name} response: Error: ${e.message}`;
+          }
+        },
+        {
+          name: `delegate_task_to_${name}`,
+          description: `Use this tool to delegate tasks to ${name}`,
+          schema,
+        },
+      );
+      return agentTool;
     }),
   ).then((tools) => tools || []);
   console.log(
@@ -286,10 +294,10 @@ export async function createSupervisorAgent(
   });
   const promptTemmplate = await getAssistantPrompt();
   const supervisorPrompt = ChatPromptTemplate.fromMessages([
+    ['system', promptTemmplate],
     [
       'system',
-      `${promptTemmplate}
-      You have a access to a team of multiples others agents with different skills and abilities. 
+      `You have a access to a team of multiples others agents with different skills and abilities. 
       You can delegate tasks to them and they will provide you with the information you need to complete your mission and goals.
 
       As the master supervizor your role is to:
@@ -311,6 +319,7 @@ export async function createSupervisorAgent(
       AND THE MOST IMPORTANT:
       - Ensure that the specialized agents execute and complete the tasks correctly, otherwise, provide the correct information to them or ask them to re-execute the task.
       - Always await the response from the specialized agents before proceeding to the next task or providing a final answer.
+      - Never response to the user without the specialized agents' responses. ALWAYS WAIT FOR THEM!!
       
       Here are the specialized agents in your team with their skills:
       ${teamTools.join('\n')}
@@ -336,6 +345,8 @@ export async function createSupervisorAgent(
     agent: supervisorAgent,
     tools: allTTools,
     memory: undefined,
+    // returnIntermediateSteps: true,
+    maxIterations: 10,
   });
   console.log('🎉 Supervisor agent created!');
   return executor;
@@ -580,10 +591,15 @@ export const yamlToDynamicStructuredToolParser = async (
     ),
   );
   // return tool config object with definition & handler
-  const agentTool = tool(functionHandler, {
-    name: data.Name,
-    description: data.Description,
-    schema,
-  });
+  const agentTool = tool(
+    // functionHandler,
+    async (...args) =>
+      await functionHandler(...args).then((r) => JSON.stringify(r)),
+    {
+      name: data.Name,
+      description: data.Description,
+      schema,
+    },
+  );
   return agentTool;
 };
