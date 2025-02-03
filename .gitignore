@@ -73,3 +73,5 @@ uploads/**/*
 !uploads/.gitkeep
 datastore/**/*
 !datastore/.gitkeep
+characters/**/*
+!characters/example.*.yml
