@@ -55,7 +55,7 @@ export class LangchainChatController {
   @ApiResponse({ status: 403, description: 'Forbidden.' })
   @UseGuards(EvmAuthGuard)
   @UseGuards(TokenHolderGuard)
-  @Post('basic-chat')
+  @Post('basic-prompt')
   async basicChat(@Body() data: { input: string }) {
     const message = data.input;
     return await this.langchainChatService.basicChat(message);
@@ -88,7 +88,7 @@ export class LangchainChatController {
   @ApiResponse({ status: 403, description: 'Forbidden.' })
   @UseGuards(EvmAuthGuard)
   @UseGuards(TokenHolderGuard)
-  @Post('context-aware-chat')
+  @Post('context-aware-prompt')
   async contextAwareChat(
     @Body() contextAwareMessages: { messages: VercelChatMessage[] },
   ) {
@@ -158,7 +158,7 @@ export class LangchainChatController {
   @ApiResponse({ status: 403, description: 'Forbidden.' })
   @UseGuards(EvmAuthGuard)
   @UseGuards(TokenHolderGuard)
-  @Post('document-chat')
+  @Post('document-prompt')
   async documentChat(@Body() data: { message: string }) {
     const message = data.message;
     return await this.langchainChatService.documentChat(message);
@@ -197,7 +197,7 @@ export class LangchainChatController {
   @ApiResponse({ status: 403, description: 'Forbidden.' })
   @UseGuards(EvmAuthGuard)
   @UseGuards(TokenHolderGuard)
-  @Post('agent-chat')
+  @Post('agent-prompt')
   async agentChat(
     @Body() contextAwareMessagesDto: { messages: VercelChatMessage[] },
   ) {

@@ -13,10 +13,10 @@ import * as fs from 'fs';
 import * as p from 'path';
 import { Response, Request } from 'express';
 import { ApiTags, ApiExcludeEndpoint, ApiBearerAuth } from '@nestjs/swagger';
-import { EvmAuthGuard } from './evm-auth.guard';
-import { TokenHolderGuard } from './token-holder.guard';
 import { SseSubjectService } from './sse-subject.service';
 import { Observable } from 'rxjs';
+import { EvmAuthGuard } from './evm-auth.guard';
+import { TokenHolderGuard } from './token-holder.guard';
 
 @ApiTags('Core')
 @Controller()

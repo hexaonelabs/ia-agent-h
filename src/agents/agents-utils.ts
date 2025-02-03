@@ -469,14 +469,16 @@ export const getAssistantCtrl = async (
   if (!Ctrl) {
     return null;
   }
-  const modulePath = `./${Ctrl}`;
+  const importPath = join(__dirname, '..', Ctrl);
   const moduleName = `${Ctrl.split('/').pop().toUpperCase()[0]}${toCamelCase(Ctrl.split('/').pop().split('.')[0].slice(1))}Agent`;
-  const ctrl = await import(modulePath).then((module) => {
-    return module?.[moduleName];
-  });
+  const ctrl = await import(importPath)
+    .then((module) => {
+      return module?.[moduleName];
+    })
+    .catch(() => null);
   if (!ctrl) {
     throw new Error(
-      `❌ Ctrl module ${moduleName} not found at path ${modulePath}`,
+      `❌ Ctrl module ${moduleName} not found at path ${importPath}`,
     );
   }
   const i = new ctrl() as { start: () => Promise<void> };
