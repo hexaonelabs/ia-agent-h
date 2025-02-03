@@ -146,24 +146,34 @@ export class AppService {
 
   async prompt({
     userInput,
-    threadId,
+    chatHistory = [],
   }: {
     userInput: string;
-    threadId?: string;
+    chatHistory: { role: string; content: string }[];
   }) {
     const token = localStorage.getItem('token');
-    const url = environment.apiEndpoint + '/prompt';
+    const url = environment.apiEndpoint + '/agent-prompt';
     const headers = new HttpHeaders({
       'Content-Type': 'application/json',
       Authorization: `Bearer ${token}`,
     });
     const request = this._http.post<{
-      data: { threadId: string; message: string };
+      statusCode: number;
+      message: string;
+      data: {
+        answer: string;
+        chat_history: any[];
+      };
     }>(
       url,
       {
-        userInput,
-        threadId,
+        messages: [
+          ...chatHistory,
+          {
+            role: 'user',
+            content: userInput,
+          },
+        ],
       },
       {
         headers,

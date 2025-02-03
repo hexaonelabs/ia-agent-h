@@ -210,13 +210,21 @@ export class ChatPageComponent implements AfterViewInit, OnDestroy {
 
       const { data } = await this._appService.prompt({
         userInput: message,
-        threadId: this.currentThreadId,
+        chatHistory: this.messages.map(({ text, type }) => ({
+          role: type,
+          content: text,
+        })),
       });
-      if (data.threadId) {
-        this.currentThreadId = data.threadId;
+      if (data.chat_history.length > 0 && this.messages.length === 0) {
+        this.messages.push(
+          ...data.chat_history.map((m) => ({
+            text: m.content as string,
+            type: m.role as 'user' | 'assistant',
+          })),
+        );
       }
       this.isPendingResponse = false;
-      lastMessage.text = data?.message || 'No response';
+      lastMessage.text = data?.answer || 'No response';
       await this.scrollToBottom();
     } catch (error: any) {
       console.error('Error:', error);
