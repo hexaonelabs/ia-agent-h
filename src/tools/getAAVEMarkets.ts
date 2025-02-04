@@ -38,6 +38,7 @@ export const getAAVEMarkets = async (
       const tokenData = {
         symbol: key,
         tokenAddress: token.UNDERLYING,
+        aToken: token.A_TOKEN,
       };
       tokens.push(tokenData);
     }

@@ -206,7 +206,7 @@ export async function createSpecializedAgent(fileName: string) {
     temperature: TEMP,
     modelName: LLM_MODEL,
     n: 1,
-    maxTokens: 100,
+    maxTokens: 1000,
   });
   const agent = await createOpenAIFunctionsAgent({
     llm,
@@ -241,17 +241,23 @@ export async function createSupervisorAgent(
       const schema = z.object({
         input: z.string().describe(`The task to delegate to ${name}`),
         context: z.string().optional().describe('The context of the task'),
+        chat_history: z
+          .array(z.string())
+          .optional()
+          .describe('The chat history'),
       });
       const agentTool = tool(
-        async ({ input, context }) => {
-          console.log(`🦸‍♂️ Task delegated to "${name}": ${input}`);
+        async ({ input, context, chat_history = [] }) => {
+          console.log(
+            `🦸‍♂️ Task delegated to "${name}": ${input} - Chat History: ${JSON.stringify(chat_history)}`,
+          );
           try {
             const result = await agent.invoke(
               {
                 name: `delegate_task_to_${name}`,
                 context,
                 input,
-                chat_history: [],
+                chat_history,
               },
               { callbacks },
             );
@@ -333,7 +339,7 @@ export async function createSupervisorAgent(
     temperature: TEMP,
     modelName: LLM_MODEL,
     n: 1,
-    maxTokens: 500,
+    maxTokens: 1000,
   });
 
   const supervisorAgent = await createOpenAIFunctionsAgent({
