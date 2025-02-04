@@ -1,9 +1,9 @@
 Name: get_balance
-Description: Get the balance of a wallet on specified network
+Description: Get the native token balance like ETH of a wallet on specified network
 Handler: tools/getBalance
 Args: 
   - Name: wallet
-    Description: The wallet address to get the balance of
+    Description: The wallet address to get the native token balance of
     Required: true
     Type: string
     Pattern: ^0x[a-fA-F0-9]{40}$

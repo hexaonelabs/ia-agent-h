@@ -71,7 +71,7 @@ export async function supply({
     };
     // supply to aave
     logger.log(
-      `🚰 Supplying to Aave pool of underlying asset: ${underlyingToken}`,
+      `🚰 Supplying to Aave pool of underlying asset: ${underlyingToken} - ${JSON.stringify(supplyParams)}`,
     );
     // call supply function
     const txs = await pool.supply({

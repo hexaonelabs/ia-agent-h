@@ -1,0 +1,9 @@
+Name: get_aave_markets
+Description: Get the list of AAVE Market tokens for a specific network
+Handler: tools/getAAVEMarkets
+Args: 
+  - Name: networkName
+    Description: The network name to get the AAVE markets for
+    Required: true
+    Type: string
+    Pattern: ^[a-zA-Z0-9]+$

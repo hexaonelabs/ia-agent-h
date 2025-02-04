@@ -583,7 +583,14 @@ export const yamlToDynamicStructuredToolParser = async (
           acc[Name] = acc[Name].optional();
         }
         if (Items) {
-          acc[Name] = acc[Name].array();
+          acc[Name] = {
+            anyOf: [
+              { type: 'string' },
+              { type: 'number' },
+              { type: 'boolean' },
+              { type: 'object' },
+            ],
+          };
         }
         return acc;
       },
