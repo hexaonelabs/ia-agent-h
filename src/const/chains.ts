@@ -40,6 +40,30 @@ export const getChainById = (chainId: number): Chain | undefined => {
   return chain;
 };
 export const getChainByName = (network: string) => {
+  // normalize names
+  if (network === 'matic') {
+    network = 'polygon';
+  }
+  if (network === 'eth' || network === 'mainnet') {
+    network = 'ethereum';
+  }
+  if (network.toLocaleLowerCase() === 'arbitrum') {
+    network = 'arbitrum one';
+  }
+  if (
+    network.toLocaleLowerCase() === 'optimism' ||
+    network.toLocaleLowerCase() === 'op' ||
+    network.toLocaleLowerCase() === 'optimistic'
+  ) {
+    network = 'OP Mainnet';
+  }
+  if (
+    network.toLocaleLowerCase() === 'zk' ||
+    network.toLocaleLowerCase() === 'zkrollup' ||
+    network.toLocaleLowerCase() === 'zKsync'
+  ) {
+    network = 'ZKsync Era';
+  }
   // check if network.toLowerCase() is in the list of chains and return the chain
   const exactTypo = chains.find(
     (chain) => chain.name.toLowerCase() === network.toLowerCase(),
