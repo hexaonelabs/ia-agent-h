@@ -1,8 +1,10 @@
 import { Hash } from 'viem';
 import { createViemPublicClient } from '../viem/createViemPublicClient';
+import { getChainById } from 'src/const/chains';
 
 interface GetTransactionReceiptArgs {
   hash: Hash;
+  chainId: number;
 }
 
 function extractReceiptInfo(receipt: any) {
@@ -15,8 +17,10 @@ function extractReceiptInfo(receipt: any) {
 
 export async function getTransactionReceipt({
   hash,
+  chainId,
 }: GetTransactionReceiptArgs) {
-  const publicClient = createViemPublicClient();
+  const chain = getChainById(chainId);
+  const publicClient = createViemPublicClient(chain);
   const receipt = await publicClient.getTransactionReceipt({ hash });
   return extractReceiptInfo(receipt);
 }
