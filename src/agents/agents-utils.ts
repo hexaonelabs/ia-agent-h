@@ -261,7 +261,9 @@ export async function createSupervisorAgent(
               },
               { callbacks },
             );
-            console.log(`✅ Task completed by "${name}"`);
+            console.log(
+              `✅ Task completed by "${name}: ${JSON.stringify(result)}"`,
+            );
             return JSON.stringify(result);
           } catch (e) {
             console.error(`❌ Task error by "${name}": ${e.message}`);

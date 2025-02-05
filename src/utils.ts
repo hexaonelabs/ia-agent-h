@@ -1,5 +1,5 @@
 import * as yaml from 'js-yaml';
-import { arbitrum, mainnet, sepolia } from 'viem/chains';
+import { arbitrum, Chain, mainnet, sepolia } from 'viem/chains';
 
 // replace `_` & `-` by convert to camel case
 export const toCamelCase = (value: string) => {
@@ -15,6 +15,12 @@ export const getNetworkByName = (network: string) => {
     default:
       return sepolia;
   }
+};
+
+export const getChainById = (chainId: number): Chain | undefined => {
+  const chains = [arbitrum, mainnet, sepolia];
+  const chain = Object.values(chains).find((chain) => chain.id === chainId);
+  return chain;
 };
 
 export const convertJSONToYAML = (json: any) => {
