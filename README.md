@@ -18,9 +18,16 @@ The framework's design emphasizes extensibility and ease of use, allowing develo
 
 Unleash the power of intelligent, autonomous agents in the decentralized world with Agent H!
 
+## 👀 Architecture Overview
+
+<div align="center">
+  <img src="./agent-h_overview.png" alt="Agent H Overview Architecture" width="100%" />
+</div>
+
+
 ## ✨ Features
 
-- **🤖 IA Assistant manager**: Orchestrate and manage multiple AI agent
+- **🤖 AI Assistant manager**: Orchestrate and manage multiple AI agent
 - **📦  Minimal Design**: Streamlined architecture for efficient operation
 - **🛠️ Highly extensible**: Create your own tools and agents assistant
 - **🔗 Direct blockchain interactions**: Provide default tools for EVM Blockchain interactions
@@ -43,6 +50,7 @@ Unleash the power of intelligent, autonomous agents in the decentralized world w
 git clone https://github.com/hexaonelabs/ia-agent-h
 cd ia-agent-h
 cp .env.example .env
+cp agent-h.yml.example characters/agent-h.yml
 npm install
 ```
 
