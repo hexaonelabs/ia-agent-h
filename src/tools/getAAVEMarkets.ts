@@ -1,5 +1,5 @@
 import * as MARKETS from '@bgd-labs/aave-address-book';
-import { getNetworkByName } from 'src/utils';
+import { getChainByName } from '../const/chains';
 
 interface GetAAVEMarketsArgs {
   networkName: string;
@@ -12,7 +12,7 @@ export const getAAVEMarkets = async (
     tokenAddress: string;
   }[]
 > => {
-  const chain = getNetworkByName(args.networkName);
+  const chain = getChainByName(args.networkName);
   if (!chain) {
     throw new Error('Invalid chainId');
   }

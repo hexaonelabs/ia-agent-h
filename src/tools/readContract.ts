@@ -1,6 +1,6 @@
 import { Address } from 'viem';
 import { createViemPublicClient } from '../viem/createViemPublicClient';
-import { getNetworkByName } from '../utils';
+import { getChainByName } from '../const/chains';
 
 interface ReadContractArgs {
   contract: Address;
@@ -17,7 +17,7 @@ export async function readContract({
   abi,
   network,
 }: ReadContractArgs) {
-  const chain = getNetworkByName(network);
+  const chain = getChainByName(network);
   if (!chain) {
     throw new Error('Invalid chainId');
   }

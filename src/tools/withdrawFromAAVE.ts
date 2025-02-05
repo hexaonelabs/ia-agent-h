@@ -14,8 +14,8 @@ import {
   AaveV3Sepolia,
   AaveV3ZkSync,
 } from '@bgd-labs/aave-address-book';
-import { getChainById } from '../utils';
 import { ConsoleLogger } from '@nestjs/common';
+import { getChainById } from '../const/chains';
 
 const createEthersProvider = (chainId: number) => {
   const chain = getChainById(chainId);
