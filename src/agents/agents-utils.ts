@@ -325,6 +325,7 @@ export async function createSupervisorAgent(
       AND THE MOST IMPORTANT:
       - Ensure that the specialized agents execute and complete the tasks correctly, otherwise, provide the correct information to them or ask them to re-execute the task.
       - Always await the response from the specialized agents before proceeding to the next task or providing a final answer.
+      - If an agent ask for confirmation and you have all the information needed, provide it to them to proceed.
       - Never response to the user without the specialized agents' responses. ALWAYS WAIT FOR THEM!!
       
       Here are the specialized agents in your team with their skills:
