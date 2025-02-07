@@ -1,0 +1,11 @@
+Name: x_social_sentiment_analyzer
+Description: 
+Handler: tools/xSocialSentimentAnalyzer
+Args: 
+  - Name: keywords
+    Description: List ok keywords to search for
+    Required: true
+    Type: array
+    Items: 
+      Type: string
+      Pattern: ^[a-zA-Z0-9]+$
