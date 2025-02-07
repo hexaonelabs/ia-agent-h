@@ -165,7 +165,7 @@ export class LangchainChatController {
     return await this.langchainChatService.documentChat(message);
   }
 
-  // @ApiBearerAuth()
+  @ApiBearerAuth()
   @ApiBody({
     type: SendPromptDto,
   })
@@ -176,8 +176,8 @@ export class LangchainChatController {
     type: PromptAPIResponse,
   })
   @ApiResponse({ status: 403, description: 'Forbidden.' })
-  // @UseGuards(EvmAuthGuard)
-  // @UseGuards(TokenHolderGuard)
+  @UseGuards(EvmAuthGuard)
+  @UseGuards(TokenHolderGuard)
   @Post('agent-prompt')
   async agentChat(@Req() request: Request) {
     const contextAwareMessagesDto = request.body;
