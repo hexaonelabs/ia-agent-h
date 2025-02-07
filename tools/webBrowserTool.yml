@@ -1,0 +1,10 @@
+Name: web_browser
+Description: Open a web browser to extract data from a URL
+Handler: tools/webBrowser
+Args: 
+  - Name: prompt
+    Description: the prompt that contains a URL (link) to open in the web browser to extract data from
+    Required: true
+    Type: string
+    # Patern looking to have a string that contin a valid url
+    Pattern: ^https?://[a-zA-Z0-9.-]+\.[a-zA-Z]{2,6}(:[0-9]{1,5})?(/.*)?$
