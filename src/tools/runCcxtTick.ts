@@ -29,6 +29,7 @@ export interface TickConfig {
 }
 
 export interface CCXTConfig {
+  broker: string;
   walletAddress: string;
   privateKey?: string;
 }
@@ -123,12 +124,14 @@ export const runCCXTTick = async (config: CCXTToolsArgs) => {
     logger.error('❌ Wallet address is required to run the bot');
     return;
   }
-  logger.log(`✉️  Wallet address to connect with: ${config.walletAddress}`);
+  logger.log(
+    `✉️  Wallet address to connect with: ${config.walletAddress} on HyperLiquid`,
+  );
   const CCXT = ccxt as any;
-  const exchange = new CCXT['hyperliquid']({
+  const exchange = new CCXT[config.broker ? config.broker : 'hyperliquid']({
     enableRateLimit: true,
     walletAddress: config.walletAddress,
-    privateKey: '',
+    privateKey: config.privateKey,
   }) as ccxt.Exchange;
   // enable testnet mode if not in production
   if (process.env.NODE_ENV !== 'production') {
@@ -143,9 +146,9 @@ export const runCCXTTick = async (config: CCXTToolsArgs) => {
     Spread: ${config.spread}
     Tick interval: ${config.tickInterval}ms
   `);
-  tick(config, exchange);
+  await tick(config, exchange);
   if (bootIsRuning) {
-    const message = '❌ Bot is not already running';
+    const message = '❌ Bot is already running';
     logger.error(message);
     return { success: false, message };
   }
