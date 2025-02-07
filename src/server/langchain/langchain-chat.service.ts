@@ -229,13 +229,18 @@ export class LangchainChatService {
     }
   }
 
-  async agentChat(contextAwareMessagesDto: { messages: VercelChatMessage[] }) {
+  async agentChat(
+    contextAwareMessagesDto: {
+      messages: VercelChatMessage[];
+    } & { userAddress: string },
+  ) {
     try {
       const { supervisor } = this._agentTeam || {};
       if (!supervisor) {
         throw new BadRequestException('Supervisor agent not found.');
       }
-      // extract messages
+      // extract data
+      const userAddress = contextAwareMessagesDto.userAddress;
       const messages = contextAwareMessagesDto.messages ?? [];
       const formattedPreviousMessages = messages
         .slice(0, -1)
@@ -248,7 +253,25 @@ export class LangchainChatService {
           input: currentMessageContent,
           chat_history: formattedPreviousMessages,
         },
-        { callbacks },
+        {
+          callbacks: [
+            {
+              ...callbacks[0],
+              handleToolEnd: (json) => {
+                const output = JSON.parse(json);
+                if (typeof output !== 'string' && output?.plan_execution) {
+                  const { timestamp, prompt } = output.plan_execution;
+                  this._taskSchedulerService.addTask(
+                    timestamp,
+                    prompt,
+                    userAddress,
+                  );
+                }
+                callbacks?.[0].handleToolEnd(json);
+              },
+            },
+          ],
+        },
       );
       // build response and return
       const _successResponse = await this._successResponse(

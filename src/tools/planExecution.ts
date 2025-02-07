@@ -2,18 +2,12 @@ interface PlanExecutionArgs {
   timestamp: number;
   prompt: string;
 }
-export const planExecution = async (
-  args: PlanExecutionArgs,
-  taskScheduler: {
-    addTask: (
-      timestamp: number,
-      prompt: string,
-      userAddress: string,
-    ) => Promise<void>;
-  },
-  userAddress: string,
-) => {
+export const planExecution = async (args: PlanExecutionArgs) => {
   const { timestamp, prompt } = args;
-  await taskScheduler.addTask(timestamp, prompt, userAddress);
-  return 'Planned';
+  return {
+    plan_execution: {
+      timestamp,
+      prompt,
+    },
+  };
 };

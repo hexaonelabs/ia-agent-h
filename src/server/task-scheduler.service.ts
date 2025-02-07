@@ -15,7 +15,9 @@ export class TaskSchedulerService {
     processId?: string;
   }[] = [];
   private readonly _logger = new CustomLogger(TaskSchedulerService.name);
-  private _sendPromptFn: (params: SendPromptDto) => Promise<{
+  private _sendPromptFn: (
+    params: SendPromptDto & { userAddress: string },
+  ) => Promise<{
     statusCode: HttpStatus;
     message: string;
     data: {
@@ -28,7 +30,7 @@ export class TaskSchedulerService {
   constructor(private _sseSubjectService: SseSubjectService) {}
 
   setExecuter(
-    fn: (params: SendPromptDto) => Promise<{
+    fn: (params: SendPromptDto & { userAddress: string }) => Promise<{
       statusCode: HttpStatus;
       message: string;
       data: {
@@ -90,6 +92,7 @@ export class TaskSchedulerService {
               content: task.prompt,
             },
           ],
+          userAddress: task.userAddress,
         });
         // dispatch result to SSE
         this._sseSubjectService.sendEventToUser(task.userAddress, {

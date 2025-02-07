@@ -21,14 +21,12 @@ class VercelMessageDto {
 
 export class SendPromptDto {
   @ApiProperty({
-    example: `[
-      {
-        role: 'user',
-        content: 'Hello, how are you?',
-      },
-    ]`,
+    example: `[{
+      "role": "user", 
+      "content": "Hello, how are you?"
+    }]`,
     description: 'The messages to send to the AI model',
-    required: false,
+    required: true,
   })
   @IsArray()
   messages: VercelMessageDto[];

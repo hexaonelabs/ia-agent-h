@@ -32,6 +32,7 @@ import { convertJSONToYAML } from '../../utils';
 import { readFileSync, writeFileSync } from 'fs';
 import { Request } from 'express';
 import { getAgentsAndToolsConfig } from '../../agents/agents-utils';
+import { SendPromptDto } from '../dto/send-prompt.dto';
 
 const PDF_BASE_PATH = join(process.cwd(), 'uploads', 'files');
 
@@ -164,29 +165,9 @@ export class LangchainChatController {
     return await this.langchainChatService.documentChat(message);
   }
 
-  @ApiBearerAuth()
+  // @ApiBearerAuth()
   @ApiBody({
-    schema: {
-      type: 'object',
-      properties: {
-        messages: {
-          type: 'array',
-          items: {
-            type: 'object',
-            properties: {
-              content: {
-                type: 'string',
-                example: 'Hello, how are you?',
-              },
-              role: {
-                type: 'string',
-                example: 'user',
-              },
-            },
-          },
-        },
-      },
-    },
+    type: SendPromptDto,
   })
   @ApiOperation({ summary: `Send a prompt to ai agent manager` })
   @ApiResponse({
@@ -195,13 +176,16 @@ export class LangchainChatController {
     type: PromptAPIResponse,
   })
   @ApiResponse({ status: 403, description: 'Forbidden.' })
-  @UseGuards(EvmAuthGuard)
-  @UseGuards(TokenHolderGuard)
+  // @UseGuards(EvmAuthGuard)
+  // @UseGuards(TokenHolderGuard)
   @Post('agent-prompt')
-  async agentChat(
-    @Body() contextAwareMessagesDto: { messages: VercelChatMessage[] },
-  ) {
-    return await this.langchainChatService.agentChat(contextAwareMessagesDto);
+  async agentChat(@Req() request: Request) {
+    const contextAwareMessagesDto = request.body;
+    const userAddress = request['user'].address;
+    return await this.langchainChatService.agentChat({
+      ...contextAwareMessagesDto,
+      userAddress,
+    });
   }
 
   @ApiBearerAuth()

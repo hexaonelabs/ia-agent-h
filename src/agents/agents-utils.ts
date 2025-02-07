@@ -524,8 +524,16 @@ export const createEmbedding = async (
  */
 export const callbacks = [
   {
-    handleToolStart: async () => {
-      console.log(`💾 Agent executing tool...`);
+    handleToolStart: async (
+      tool,
+      input,
+      runId,
+      _parentRunId,
+      _tags,
+      _metadata,
+      runName: string,
+    ) => {
+      console.log(`💾 Agent executing "${runName}" tool... `);
     },
     handleToolEnd(output) {
       console.log(`🔧 Agent tool output: ${JSON.stringify({ output })}`);
