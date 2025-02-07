@@ -1,21 +1,35 @@
 import { ApiProperty } from '@nestjs/swagger';
-import { IsOptional, IsString } from 'class-validator';
+import { IsArray, IsString } from 'class-validator';
 
-export class SendPromptDto {
+class VercelMessageDto {
   @ApiProperty({
-    example: '1',
-    description: 'The thread ID to send the prompt to',
-    required: false,
-  })
-  @IsString()
-  @IsOptional()
-  readonly threadId?: string;
-
-  @ApiProperty({
-    example: 'What is your wallet address?',
-    description: 'The user input to send to the agent',
+    example: `user | system`,
+    description: 'The role of the message sender',
     required: true,
   })
   @IsString()
-  readonly userInput: string;
+  role: string;
+
+  @ApiProperty({
+    example: `Hello, how are you?`,
+    description: 'The message content',
+    required: true,
+  })
+  @IsString()
+  content: string;
+}
+
+export class SendPromptDto {
+  @ApiProperty({
+    example: `[
+      {
+        role: 'user',
+        content: 'Hello, how are you?',
+      },
+    ]`,
+    description: 'The messages to send to the AI model',
+    required: false,
+  })
+  @IsArray()
+  messages: VercelMessageDto[];
 }

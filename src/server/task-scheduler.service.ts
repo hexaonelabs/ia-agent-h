@@ -1,4 +1,4 @@
-import { Injectable } from '@nestjs/common';
+import { HttpStatus, Injectable } from '@nestjs/common';
 import { CustomLogger } from '../logger.service';
 import { SendPromptDto } from '../server/dto/send-prompt.dto';
 import { SseSubjectService } from './sse-subject.service';
@@ -19,27 +19,35 @@ export class TaskSchedulerService {
     params: SendPromptDto,
     userAddress: string,
   ) => Promise<{
-    threadId: string;
+    statusCode: HttpStatus;
     message: string;
+    data: {
+      answer: string;
+      chat_history: any[];
+    };
   }>;
   private _lastLoadTimestamp = 0;
+  private _intervalId: NodeJS.Timeout | null = null;
   constructor(private _sseSubjectService: SseSubjectService) {}
 
   setExecuter(
     fn: (
       params: SendPromptDto,
       userAddress: string,
-    ) => Promise<{ threadId: string; message: string }>,
+    ) => Promise<{
+      statusCode: HttpStatus;
+      message: string;
+      data: {
+        answer: string;
+        chat_history: any[];
+      };
+    }>,
   ) {
     this._sendPromptFn = fn;
-    this._runTasks();
-    this._loadTasks();
-    const t = setInterval(() => {
-      this._logger.log(
-        `🚀 Task Scheduler Service is ready and looking to execute task every 15000ms`,
-      );
-      clearInterval(t);
-    }, 14900);
+    this._init();
+    this._logger.log(
+      `🚀 Task Scheduler Service is ready and looking to execute task every 15000ms`,
+    );
   }
 
   addTask(
@@ -52,6 +60,27 @@ export class TaskSchedulerService {
     this._logger.log(`🕒 Planned task ${id}: ${timestamp}: ${prompt}`);
   }
 
+  stop() {
+    if (this._intervalId) {
+      clearTimeout(this._intervalId);
+      this._intervalId = null;
+    }
+  }
+
+  private async _init() {
+    await this._loadTasks();
+    this._runTasks();
+    this._scheduleNextRun();
+  }
+
+  private _scheduleNextRun() {
+    this._intervalId = setTimeout(async () => {
+      await this._loadTasks();
+      this._runTasks();
+      this._scheduleNextRun();
+    }, 14900);
+  }
+
   private _runTasks() {
     const now = Math.floor(Date.now() / 1000); // Timestamp actuel en secondes
     this.tasks.forEach(async (task, index) => {
@@ -62,7 +91,12 @@ export class TaskSchedulerService {
         // execute task
         const result = await this._sendPromptFn(
           {
-            userInput: task.prompt,
+            messages: [
+              {
+                role: 'user',
+                content: task.prompt,
+              },
+            ],
           },
           task.userAddress,
         );
@@ -84,6 +118,7 @@ export class TaskSchedulerService {
     if (this._lastLoadTimestamp + 1000 * 60 * 60 > Date.now()) {
       return;
     }
+    this._logger.log(`🔄 Loading tasks from Google Calendar`);
     // update last load timestamp before loading to prevent multiple loading
     this._lastLoadTimestamp = Date.now();
     // load task from calendar google events
@@ -95,6 +130,9 @@ export class TaskSchedulerService {
     const eventsToExclude = this.tasks.map((task) => task.id);
     const eventsList = events.filter(
       (event) => !eventsToExclude.includes(event.created),
+    );
+    this._logger.log(
+      `📅 ${eventsList.length} events loaded from Google Calendar`,
     );
     // calculate timestamp events
     eventsList.forEach(async (event) => {

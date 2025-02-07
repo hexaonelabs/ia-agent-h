@@ -19,6 +19,7 @@ import * as pdf from 'pdf-parse';
 import { InMemoryChatMessageHistory } from '@langchain/core/chat_history';
 import { CustomLogger } from '../../logger.service';
 import { buildTeamOfAgents, callbacks } from '../../agents/agents-utils';
+import { TaskSchedulerService } from '../task-scheduler.service';
 
 export enum TEMPLATES {
   BASIC_CHAT_TEMPLATE = `You are an expert software engineer, give concise response.
@@ -69,9 +70,12 @@ export class LangchainChatService {
   private readonly _logger = new CustomLogger(LangchainChatService.name);
   private _db?: DatabaseAdaptator;
   private _agentTeam: AgentTeam | null = null;
-  constructor() {
-    this.startTeam();
-    // this._taskSchedulerService.setExecuter(this.sendMessage.bind(this));
+  constructor(private readonly _taskSchedulerService: TaskSchedulerService) {
+    this.startTeam().then(() =>
+      this._taskSchedulerService.setExecuter(
+        async (context) => await this.agentChat(context),
+      ),
+    );
   }
 
   async startTeam() {
