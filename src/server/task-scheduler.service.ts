@@ -15,10 +15,7 @@ export class TaskSchedulerService {
     processId?: string;
   }[] = [];
   private readonly _logger = new CustomLogger(TaskSchedulerService.name);
-  private _sendPromptFn: (
-    params: SendPromptDto,
-    userAddress: string,
-  ) => Promise<{
+  private _sendPromptFn: (params: SendPromptDto) => Promise<{
     statusCode: HttpStatus;
     message: string;
     data: {
@@ -31,10 +28,7 @@ export class TaskSchedulerService {
   constructor(private _sseSubjectService: SseSubjectService) {}
 
   setExecuter(
-    fn: (
-      params: SendPromptDto,
-      userAddress: string,
-    ) => Promise<{
+    fn: (params: SendPromptDto) => Promise<{
       statusCode: HttpStatus;
       message: string;
       data: {
@@ -44,10 +38,10 @@ export class TaskSchedulerService {
     }>,
   ) {
     this._sendPromptFn = fn;
-    this._init();
     this._logger.log(
       `🚀 Task Scheduler Service is ready and looking to execute task every 15000ms`,
     );
+    this._init();
   }
 
   addTask(
@@ -89,17 +83,14 @@ export class TaskSchedulerService {
         // add processId to prevent multiple execution
         task.processId = uuid();
         // execute task
-        const result = await this._sendPromptFn(
-          {
-            messages: [
-              {
-                role: 'user',
-                content: task.prompt,
-              },
-            ],
-          },
-          task.userAddress,
-        );
+        const result = await this._sendPromptFn({
+          messages: [
+            {
+              role: 'user',
+              content: task.prompt,
+            },
+          ],
+        });
         // dispatch result to SSE
         this._sseSubjectService.sendEventToUser(task.userAddress, {
           data: { chat: result },
