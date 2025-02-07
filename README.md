@@ -24,6 +24,23 @@ Unleash the power of intelligent, autonomous agents in the decentralized world w
   <img src="./agent-h_overview.png" alt="Agent H Overview Architecture" width="100%" />
 </div>
 
+### 🤖 Agents
+
+Agents are one of the core building blocks from the Agent-H framework, representing individual AI assistants that can interact with users, execute tasks, and communicate with other agents. Each agent is defined by a configuration file that specifies its name, description, and a list of tools that it can execute. By defining agents, developers can create a wide range of AI applications with different capabilities and behaviors. Each agent are defined by a configuration file that specifies its name, description, and a list of tools that it can execute. All files are placed in the `./characters` directory.
+
+### 🔧 Tools
+
+Tools are one of the building blocks from the Agent-H framework, providing a way to interact with the AI agents and execute specific tasks. Each tool is defined by a configuration file that specifies its name, description, and handler function. The handler function is responsible for processing the tool's logic and generating a response that can be sent back to the user. By defining tools, developers can create a wide range of functionalities.
+
+- Tools files configureation are defined in the `./tools` directory.
+- Tools handler functions are defined in the `./src/tools` directory.
+
+For example, a tool might be used to fetch data from an external API, perform calculations, or interact with a blockchain. By defining tools, developers can extend the functionality of the AI agents and create more sophisticated applications.
+
+### Controlers
+
+Class Controllers are optionnal and can be used to manage specific type of logic. Each controller is defined by a `Class` file that implement `start()` and `stop()` methods.  
+All controles have to be placed in the `./src/agents` directory. Use existing examples controllers as a template to create your own.
 
 ## ✨ Features
 
