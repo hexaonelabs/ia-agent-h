@@ -438,6 +438,10 @@ const initCCXT = async (config: CCXTToolsArgs) => {
     logger.log('🧪 Enabling testnet mode');
     exchange.setSandboxMode(true);
   }
+  // set the leverage of orders
+  // const market = `${config.asset}/${config.base}:${config.base}`;
+  // exchange.setLeverage(2, market);
+  // return exchange with logger
   return {
     exchange,
     logger,
