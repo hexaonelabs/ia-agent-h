@@ -26,21 +26,15 @@ Args:
     Type: number
     Pattern: ^0(\.[0-9]{1,2})?$|^1(\.0{1,2})?$
 
-  - Name: exchangeId
-    Description: The ID of the exchange to use
+  - Name: broker
+    Description: The name of the broker exchange to use
     Required: true
     Type: string
-    Pattern: ^[a-z0-9]{1,20}$
+    Pattern: ^[a-z]{3,20}$
+    Default: hyperliquid
 
-  - Name: walletAddress
-    Description: The wallet address for the user
+  - Name: orderType
+    Description: The type of order to place (buy/sell)
     Required: true
     Type: string
-    Pattern: ^0x[a-fA-F0-9]{40}$
-
-
-  - Name: privateKey
-    Description: The private key of the wallet (requered for trading)
-    Required: false
-    Type: string
-    Pattern: ^0x[a-fA-F0-9]{64}$
+    Pattern: ^(buy|sell)$

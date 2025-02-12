@@ -28,10 +28,6 @@ export interface TickConfig {
    * Example: 0.1 => 10%
    */
   spread: number;
-  /**
-   * The interval in milliseconds to run the tick
-   */
-  tickInterval?: number;
 }
 
 /**
@@ -128,7 +124,7 @@ async function calculateMovingAverages(
 }
 
 const marketMomentumStrategy = async (
-  config: CCXTToolsArgs,
+  config: CCXTToolsArgs & { tickInterval: number },
   exchange: Exchange,
 ): CCXTStrategyResponse => {
   const { asset, base, allocation, spread } = config;
@@ -219,7 +215,11 @@ const marketMomentumStrategy = async (
  * @returns
  */
 const mmaBulishStrategy = async (
-  config: TickConfig & { timeframe?: string; privateKey?: string },
+  config: TickConfig & {
+    timeframe?: string;
+    privateKey?: string;
+    tickInterval: number;
+  },
   exchange: Pick<
     Exchange,
     | 'fetchBalance'
@@ -387,28 +387,7 @@ const TRADING_STRATEGIES = {
   marketMomentumStrategy,
 };
 
-/**
- * 
- * @param config 
- * @returns 
- * @example
- * ```
- *  const config: CCXTToolsArgs = {
-      asset: 'BTC',
-      base: 'USDC',
-      allocation: 0.1,
-      spread: 0.1,
-      tickInterval: 1 * 60 * 60 * 1000,
-      broker: 'hyperliquid',
-    };
-    await runCCXTTick(config);
-
-  ```
-  Read more on the documentation and Github: 
-  https://docs.ccxt.com/#/exchanges/hyperliquid
-  https://github.com/ccxt/ccxt/blob/master/ts/src/test/tests.ts
- */
-export const runCCXTTick = async (config: CCXTToolsArgs) => {
+const initCCXT = async (config: CCXTToolsArgs) => {
   const logger = new CustomLogger('CCXT');
   logger.log(`ℹ️  Initializing v${version} trading bot `);
   // Check if wallet address and private key are provided
@@ -436,6 +415,37 @@ export const runCCXTTick = async (config: CCXTToolsArgs) => {
     logger.log('🧪 Enabling testnet mode');
     exchange.setSandboxMode(true);
   }
+  return {
+    exchange,
+    logger,
+  };
+};
+
+/**
+ * 
+ * @param config 
+ * @returns 
+ * @example
+ * ```
+ *  const config: CCXTToolsArgs = {
+      asset: 'BTC',
+      base: 'USDC',
+      allocation: 0.1,
+      spread: 0.1,
+      tickInterval: 1 * 60 * 60 * 1000,
+      broker: 'hyperliquid',
+    };
+    await runCCXTTick(config);
+
+  ```
+  Read more on the documentation and Github: 
+  https://docs.ccxt.com/#/exchanges/hyperliquid
+  https://github.com/ccxt/ccxt/blob/master/ts/src/test/tests.ts
+ */
+export const runCCXTBot = async (
+  config: CCXTToolsArgs & { tickInterval: number },
+) => {
+  const { exchange, logger } = await initCCXT(config);
   // exchange.verbose = true;
   logger.log(`⚙ Running bot with config: 
     Market: ${config.asset}/${config.base}
@@ -459,7 +469,7 @@ export const runCCXTTick = async (config: CCXTToolsArgs) => {
     throw new Error(`Backtest failed. Please check the strategy: ${result}`);
   }
   // execute strategy
-  if (config.tickInterval) {
+  if (config.tickInterval > 0) {
     logger.log(`🚀 Starting bot with interval of ${config.tickInterval}ms`);
     bootIsRuning = setInterval(
       async () => await TRADING_STRATEGIES.mmaBulishStrategy(config, exchange),
@@ -611,4 +621,53 @@ export const fetchFutures = async () => {
       console.log('error =', error);
     }
   }
+};
+
+/**
+ * Tool to execute Execute a trading tick using the CCXT library
+ * @param config
+ */
+export const runCCXTTick = async (
+  config: CCXTToolsArgs & {
+    orderType: 'buy' | 'sell';
+  },
+) => {
+  const { exchange, logger } = await initCCXT(config);
+  const { asset, base, orderType } = config;
+  const market = `${asset}/${base}:${base}`;
+  const ticker = await exchange.fetchTicker(market);
+  const balances = await exchange.fetchBalance();
+  const assetBalance: number = balances.free[asset] || 0;
+  const baseBalance: number = balances.free[base] || 0;
+  const sellPrice = ticker.bid;
+  const buyPrice = ticker.ask;
+  const sellVolume = assetBalance;
+  const buyVolume = baseBalance / buyPrice;
+  logger.log(`⚙ Running tick for ${market} market`);
+  logger.log(`📄 Resume trading with the following positions:
+  Asset balance: ${assetBalance}
+  Base balance: ${baseBalance}
+  Selling order: ${sellVolume} ${asset} at ${sellPrice}
+  Buying order ${buyVolume} ${asset} at ${buyPrice}
+  `);
+  if (orderType === 'sell') {
+    logger.log(`📉 Place a Sell order: ${sellVolume} ${asset}`);
+    await exchange.createOrder(market, 'limit', 'sell', sellVolume, sellPrice);
+  } else {
+    logger.log(`📈 Place a Buy order ${buyVolume} ${asset}`);
+    await exchange.createOrder(market, 'limit', 'buy', buyVolume, buyPrice);
+  }
+  logger.log('✅ Done! Tick completed');
+  const balance = await exchange.fetchBalance();
+  return {
+    success: true,
+    message: '✅ Tick completed',
+    data: {
+      balance,
+      orderType,
+      orderAmount: orderType === 'sell' ? sellVolume : buyVolume,
+      orderPrice: orderType === 'sell' ? sellPrice : buyPrice,
+      market,
+    },
+  };
 };
