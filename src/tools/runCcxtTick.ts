@@ -259,7 +259,7 @@ const mmaBulishStrategy = async (
     if (!isBackTest) {
       logger.log(`📊 Calculating moving averages for ${market} market...`);
     }
-    const { ma20, ma50 } = await calculateMovingAverages(ohlcv);
+    const { ma14, ma20, ma50 } = await calculateMovingAverages(ohlcv);
     const currentPrice = ohlcv[ohlcv.length - 1][4];
     const currentDate = new Date(
       ohlcv[ohlcv.length - 1][0],
@@ -269,6 +269,10 @@ const mmaBulishStrategy = async (
     // logger.log(`💰 Wallet Balance: ${JSON.stringify(balance)}`);
     const baseBalance = balance?.[base]?.free ?? 0;
     const assetBalance = balance?.[asset]?.free ?? 0;
+    // is current price spread lower than last buy price
+    const isCurrentPriceLowerUsingSpreadThanLastBuyPrice = lastBuyPrice
+      ? lastBuyPrice - lastBuyPrice * config.spread > currentPrice
+      : true;
     if (!config.privateKey) {
       logger.log(
         '🚨 Running in dry mode. No orders will be placed you have to provide privateKey to place orders',
@@ -287,13 +291,19 @@ const mmaBulishStrategy = async (
       logger.log(`📊 Last higher buy price: ${lastHigerBuyPrice}`);
       logger.log(`📊 Last crossover type: ${lastCrossoverType}`);
       logger.log(`📊 is current price >= ma20: ${currentPrice >= ma20}`);
+      logger.log(`📊 is ma14 >= ma20: ${ma14 >= ma20}`);
       logger.log(`📊 is base balance > 0: ${baseBalance > 0}`);
+      logger.log(
+        `📊 is current price lower than previous buy more than ${config.spread}%: ${isCurrentPriceLowerUsingSpreadThanLastBuyPrice}`,
+      );
     }
     let action: -1 | 0 | 1 = 0; // 0: no action, 1: buy, -1: sell
     switch (true) {
       // Bullish cross (buy)
       case currentPrice >= ma20 &&
         currentPrice <= (lastBuyPrice || currentPrice) &&
+        ma14 >= ma20 &&
+        isCurrentPriceLowerUsingSpreadThanLastBuyPrice &&
         baseBalance > 0 &&
         baseBalance * config.allocation > 10: {
         const amountToBuy = baseBalance * config.allocation; // X% Base portfolio
@@ -457,16 +467,18 @@ export const runCCXTBot = async (
   if (bootIsRuning) {
     const message = '❌ Bot is already running';
     logger.error(message);
-    return { success: false, message };
+    return { success: false, message, data: null };
   }
   // execute backtest before running the bot
-  const result = await backtest(
+  const backtestResult = await backtest(
     config,
     exchange,
     TRADING_STRATEGIES.mmaBulishStrategy,
   );
-  if (result.totalTrades <= 0 || result.pnlPercentage <= 5) {
-    throw new Error(`Backtest failed. Please check the strategy: ${result}`);
+  if (backtestResult.totalTrades <= 0 || backtestResult.pnlPercentage <= 5) {
+    throw new Error(
+      `Backtest failed. Please check the strategy: ${backtestResult}`,
+    );
   }
   // execute strategy
   if (config.tickInterval > 0) {
@@ -484,6 +496,7 @@ export const runCCXTBot = async (
   return {
     success: true,
     message: '✅ Bot is running',
+    data: backtestResult,
   };
 };
 
@@ -500,6 +513,22 @@ export const stopCCXTBot = () => {
   return {
     success: false,
     message: '❌ Bot is not running',
+  };
+};
+
+export const backtestBot = async (
+  config: CCXTToolsArgs & { tickInterval: number },
+) => {
+  const { exchange } = await initCCXT(config);
+  const backtestResult = await backtest(
+    config,
+    exchange,
+    TRADING_STRATEGIES.mmaBulishStrategy,
+  );
+  return {
+    success: true,
+    message: '✅ Backtest completed',
+    data: backtestResult,
   };
 };
 

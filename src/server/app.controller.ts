@@ -12,11 +12,23 @@ import { AppService } from './app.service';
 import * as fs from 'fs';
 import * as p from 'path';
 import { Response, Request } from 'express';
-import { ApiTags, ApiExcludeEndpoint, ApiBearerAuth } from '@nestjs/swagger';
+import {
+  ApiTags,
+  ApiExcludeEndpoint,
+  ApiBearerAuth,
+  ApiBody,
+  ApiResponse,
+} from '@nestjs/swagger';
 import { SseSubjectService } from './sse-subject.service';
 import { Observable } from 'rxjs';
 import { EvmAuthGuard } from './evm-auth.guard';
 import { TokenHolderGuard } from './token-holder.guard';
+import {
+  backtestBot,
+  CCXTToolsArgs,
+  runCCXTBot,
+  stopCCXTBot,
+} from '../tools/runCcxtTick';
 
 @ApiTags('Core')
 @Controller()
@@ -36,15 +48,6 @@ export class AppController {
 
   @Get('/ping')
   async test() {
-    // const config: TickConfig = {
-    //   asset: 'BTC',
-    //   base: 'USDC',
-    //   allocation: 0.1,
-    //   spread: 0.1,
-    //   tickInterval: 30 * 1000,
-    // };
-    // const wallet = createViemWalletClient();
-    // await run({ ...config, walletAddress: wallet.account.address });
     return {
       data: 'success',
       success: true,
@@ -62,45 +65,6 @@ export class AppController {
       body.message,
     );
   }
-
-  // @ApiBearerAuth()
-  // @ApiOperation({ summary: `Send a prompt to ia agent manager` })
-  // @ApiBody({ type: SendPromptDto })
-  // @ApiResponse({
-  //   status: 200,
-  //   description: 'The prompt was sent successfully',
-  //   type: PromptAPIResponse,
-  // })
-  // @ApiResponse({ status: 403, description: 'Forbidden.' })
-  // @UseGuards(EvmAuthGuard)
-  // @UseGuards(TokenHolderGuard)
-  // @Post('/prompt')
-  // async chat(@Req() request: Request): Promise<{
-  //   data: {
-  //     threadId: string;
-  //     message: string;
-  //   };
-  //   success: boolean;
-  // }> {
-  //   const body = request.body;
-  //   let threadId = body.threadId;
-  //   if (!threadId) {
-  //     const thread = await this._agentService.createThread();
-  //     threadId = thread.id;
-  //   }
-  //   const userAddress = request['user'].address;
-  //   const response = await this._agentService
-  //     .sendMessage({ ...body, threadId }, userAddress)
-  //     .then((data) => ({ data, success: true }))
-  //     .catch((error) => ({
-  //       data: {
-  //         threadId,
-  //         message: error instanceof Error ? error.message : 'Unknown error',
-  //       },
-  //       success: false,
-  //     }));
-  //   return response;
-  // }
 
   /**
    * Message event from server using SSE.
@@ -155,5 +119,123 @@ export class AppController {
         success: false,
       };
     }
+  }
+
+  @ApiBearerAuth()
+  @ApiBody({
+    schema: {
+      type: 'object',
+      properties: {
+        asset: {
+          type: 'string',
+          example: 'BTC',
+        },
+        base: {
+          type: 'string',
+          example: 'USDC',
+        },
+        allocation: {
+          type: 'number',
+          example: 0.1,
+        },
+        spread: {
+          type: 'number',
+          example: 0.1,
+        },
+        broker: {
+          type: 'string',
+          example: 'hyperliquid',
+        },
+        tickInterval: {
+          type: 'number',
+          example: 3600000,
+        },
+      },
+      required: [
+        'asset',
+        'base',
+        'allocation',
+        'spread',
+        'broker',
+        'tickInterval',
+      ],
+    },
+  })
+  @ApiResponse({ status: 403, description: 'Forbidden.' })
+  @UseGuards(EvmAuthGuard)
+  @UseGuards(TokenHolderGuard)
+  @Post('/startBot')
+  async startBot(@Body() body: CCXTToolsArgs & { tickInterval: number }) {
+    const { message, success, data } = await runCCXTBot(body);
+    return {
+      data,
+      message,
+      success,
+    };
+  }
+
+  @ApiBearerAuth()
+  @ApiBody({
+    schema: {
+      type: 'object',
+      properties: {
+        asset: {
+          type: 'string',
+          example: 'BTC',
+        },
+        base: {
+          type: 'string',
+          example: 'USDC',
+        },
+        allocation: {
+          type: 'number',
+          example: 0.1,
+        },
+        spread: {
+          type: 'number',
+          example: 0.1,
+        },
+        broker: {
+          type: 'string',
+          example: 'hyperliquid',
+        },
+        tickInterval: {
+          type: 'number',
+          example: 3600000,
+        },
+      },
+      required: [
+        'asset',
+        'base',
+        'allocation',
+        'spread',
+        'broker',
+        'tickInterval',
+      ],
+    },
+  })
+  @ApiResponse({ status: 403, description: 'Forbidden.' })
+  @UseGuards(EvmAuthGuard)
+  @Post('/backtestBot')
+  async backtestBot(@Body() body: CCXTToolsArgs & { tickInterval: number }) {
+    const { message, success, data } = await backtestBot(body);
+    return {
+      data,
+      message,
+      success,
+    };
+  }
+
+  @ApiBearerAuth()
+  @ApiResponse({ status: 403, description: 'Forbidden.' })
+  @UseGuards(EvmAuthGuard)
+  @Get('/stopBot')
+  async stopBot() {
+    const { message, success } = stopCCXTBot();
+    return {
+      message: message,
+      success,
+      data: null,
+    };
   }
 }
