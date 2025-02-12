@@ -76,3 +76,5 @@ datastore/**/*
 characters/**/*
 !characters/example.*.yml
 !characters/.gitkeep
+private/**/*
+!private/.gitkeep

@@ -1,7 +1,11 @@
 import { writeFileSync } from 'fs';
-import { STORAGE_FILE, StoredAccount } from './getStoredAbstractAccount';
+import { StoredAccount } from './getStoredAbstractAccount';
 
-export function storeAbstractAccount(privateKey: string, address: string) {
+export function storeAbstractAccount(
+  privateKey: string,
+  address: string,
+  filepath: string,
+) {
   const data: StoredAccount = { privateKey, address };
-  writeFileSync(STORAGE_FILE, JSON.stringify(data), 'utf8');
+  writeFileSync(filepath, JSON.stringify(data), 'utf8');
 }

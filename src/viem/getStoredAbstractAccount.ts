@@ -4,13 +4,16 @@ import { privateKeyToAccount } from 'viem/accounts';
 import { createRandomAccount } from './createRandomAccount';
 import { storeAbstractAccount } from './storeAbstractAcount';
 
-export const STORAGE_FILE = join(process.cwd(), '_private', 'account.json');
-
 export interface StoredAccount {
   privateKey: string;
   address: string;
 }
-export function getStoredAbstractAccount() {
+export function getStoredAbstractAccount(fileName = 'account.json') {
+  const STORAGE_FILE = join(
+    process.cwd(),
+    'private',
+    fileName.includes('.json') ? fileName : `${fileName}.json`,
+  );
   try {
     if (existsSync(STORAGE_FILE)) {
       const data = readFileSync(STORAGE_FILE, 'utf8');
@@ -23,7 +26,11 @@ export function getStoredAbstractAccount() {
     } else {
       const result = createRandomAccount();
       // store result data
-      storeAbstractAccount(result.privateKey, result.account.address);
+      storeAbstractAccount(
+        result.privateKey,
+        result.account.address,
+        STORAGE_FILE,
+      );
       return {
         account: result.account,
         address: result.account.address,
