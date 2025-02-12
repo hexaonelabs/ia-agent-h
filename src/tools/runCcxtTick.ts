@@ -57,6 +57,17 @@ export type CCXTStrategyResponse = Promise<{
  */
 export type CCXTToolsArgs = TickConfig & CCXTConfig;
 
+type StrategyExchange = Pick<
+  Exchange,
+  | 'fetchBalance'
+  | 'fetchOHLCV'
+  | 'fetchTicker'
+  | 'fetchOrders'
+  | 'createMarketBuyOrder'
+  | 'createMarketSellOrder'
+  | 'cancelOrder'
+>;
+
 interface MovingAverages {
   ma14: number;
   ma20: number;
@@ -220,13 +231,7 @@ const mmaBulishStrategy = async (
     privateKey?: string;
     tickInterval: number;
   },
-  exchange: Pick<
-    Exchange,
-    | 'fetchBalance'
-    | 'fetchOHLCV'
-    | 'createMarketBuyOrder'
-    | 'createMarketSellOrder'
-  >,
+  exchange: StrategyExchange,
   isBackTest: boolean = false,
 ): CCXTStrategyResponse => {
   const logger = new CustomLogger(isBackTest ? 'CCXT Backtest' : 'CCXT');
@@ -238,8 +243,6 @@ const mmaBulishStrategy = async (
     isBackTest ? `_backtest_` + market : market,
   );
   try {
-    // logger.log(`👨‍💻 Calculate positions for ${market} market using strategy...`);
-    // Récupération des données OHLCV
     if (!isBackTest) {
       logger.log(`=======================================`);
       logger.log(`📄 Trading with the following parametters:`);
@@ -256,11 +259,21 @@ const mmaBulishStrategy = async (
     if (ohlcv.length === 0) {
       throw new Error('No historical data available for the given period.');
     }
+    // Cancel all open orders not filled
+    const orders = await exchange.fetchOrders(market);
+    if (orders.length > 0) {
+      logger.log(`🗑️ Cancelling all previous orders (${orders.length})...`);
+      orders.forEach(async (order) => {
+        await exchange.cancelOrder(order.id, market);
+      });
+      logger.log('✅ Done! Orders cancelled.');
+    }
     if (!isBackTest) {
       logger.log(`📊 Calculating moving averages for ${market} market...`);
     }
     const { ma14, ma20, ma50 } = await calculateMovingAverages(ohlcv);
-    const currentPrice = ohlcv[ohlcv.length - 1][4];
+    const ticker = await exchange.fetchTicker(market);
+    const currentPrice = ticker.bid;
     const currentDate = new Date(
       ohlcv[ohlcv.length - 1][0],
     ).toLocaleDateString();
@@ -537,13 +550,7 @@ const backtest = async (
   exchange: Exchange,
   strategy: (
     config: TickConfig,
-    exchange: Pick<
-      Exchange,
-      | 'fetchBalance'
-      | 'fetchOHLCV'
-      | 'createMarketBuyOrder'
-      | 'createMarketSellOrder'
-    >,
+    exchange: StrategyExchange,
     isBackTest: boolean,
   ) => Promise<{ action: number }>,
 ) => {
@@ -590,6 +597,17 @@ const backtest = async (
           const amount = args[1];
           baseBalance += amount * ohlcv[i][4];
           assetBalance -= amount;
+          return {} as any;
+        },
+        fetchTicker: async () => {
+          return {
+            bid: ohlcv[i][4],
+          } as any;
+        },
+        fetchOrders: async () => {
+          return [] as any;
+        },
+        cancelOrder: async () => {
           return {} as any;
         },
       },
