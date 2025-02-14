@@ -12,23 +12,11 @@ import { AppService } from './app.service';
 import * as fs from 'fs';
 import * as p from 'path';
 import { Response, Request } from 'express';
-import {
-  ApiTags,
-  ApiExcludeEndpoint,
-  ApiBearerAuth,
-  ApiBody,
-  ApiResponse,
-} from '@nestjs/swagger';
+import { ApiTags, ApiExcludeEndpoint, ApiBearerAuth } from '@nestjs/swagger';
 import { SseSubjectService } from './sse-subject.service';
 import { Observable } from 'rxjs';
 import { EvmAuthGuard } from './evm-auth.guard';
 import { TokenHolderGuard } from './token-holder.guard';
-import {
-  backtestBot,
-  CCXTToolsArgs,
-  runCCXTBot,
-  stopCCXTBot,
-} from '../tools/runCcxtTick';
 
 @ApiTags('Core')
 @Controller()
@@ -119,123 +107,5 @@ export class AppController {
         success: false,
       };
     }
-  }
-
-  @ApiBearerAuth()
-  @ApiBody({
-    schema: {
-      type: 'object',
-      properties: {
-        asset: {
-          type: 'string',
-          example: 'BTC',
-        },
-        base: {
-          type: 'string',
-          example: 'USDC',
-        },
-        allocation: {
-          type: 'number',
-          example: 0.1,
-        },
-        spread: {
-          type: 'number',
-          example: 0.1,
-        },
-        broker: {
-          type: 'string',
-          example: 'hyperliquid',
-        },
-        tickInterval: {
-          type: 'number',
-          example: 3600000,
-        },
-      },
-      required: [
-        'asset',
-        'base',
-        'allocation',
-        'spread',
-        'broker',
-        'tickInterval',
-      ],
-    },
-  })
-  @ApiResponse({ status: 403, description: 'Forbidden.' })
-  @UseGuards(EvmAuthGuard)
-  @UseGuards(TokenHolderGuard)
-  @Post('/startBot')
-  async startBot(@Body() body: CCXTToolsArgs & { tickInterval: number }) {
-    const { message, success, data } = await runCCXTBot(body);
-    return {
-      data,
-      message,
-      success,
-    };
-  }
-
-  @ApiBearerAuth()
-  @ApiBody({
-    schema: {
-      type: 'object',
-      properties: {
-        asset: {
-          type: 'string',
-          example: 'BTC',
-        },
-        base: {
-          type: 'string',
-          example: 'USDC',
-        },
-        allocation: {
-          type: 'number',
-          example: 0.1,
-        },
-        spread: {
-          type: 'number',
-          example: 0.1,
-        },
-        broker: {
-          type: 'string',
-          example: 'hyperliquid',
-        },
-        tickInterval: {
-          type: 'number',
-          example: 3600000,
-        },
-      },
-      required: [
-        'asset',
-        'base',
-        'allocation',
-        'spread',
-        'broker',
-        'tickInterval',
-      ],
-    },
-  })
-  @ApiResponse({ status: 403, description: 'Forbidden.' })
-  @UseGuards(EvmAuthGuard)
-  @Post('/backtestBot')
-  async backtestBot(@Body() body: CCXTToolsArgs & { tickInterval: number }) {
-    const { message, success, data } = await backtestBot(body);
-    return {
-      data,
-      message,
-      success,
-    };
-  }
-
-  @ApiBearerAuth()
-  @ApiResponse({ status: 403, description: 'Forbidden.' })
-  @UseGuards(EvmAuthGuard)
-  @Get('/stopBot')
-  async stopBot() {
-    const { message, success } = stopCCXTBot();
-    return {
-      message: message,
-      success,
-      data: null,
-    };
   }
 }

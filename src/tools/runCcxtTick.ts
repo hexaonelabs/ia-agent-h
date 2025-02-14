@@ -28,6 +28,10 @@ export interface TickConfig {
    * Example: 0.1 => 10%
    */
   spread: number;
+  /**
+   *  The interval in milliseconds to run the tick
+   */
+  tickInterval: number;
 }
 
 /**
@@ -66,6 +70,8 @@ type StrategyExchange = Pick<
   | 'createMarketBuyOrder'
   | 'createMarketSellOrder'
   | 'cancelOrder'
+  | 'createOrder'
+  | 'fetchPositions'
 >;
 
 interface MovingAverages {
@@ -75,6 +81,7 @@ interface MovingAverages {
 }
 
 let bootIsRuning: NodeJS.Timeout | null = null;
+const LEVERAGE = 2;
 
 const writeToFile = (
   data: {
@@ -134,8 +141,37 @@ async function calculateMovingAverages(
   }, {} as MovingAverages);
 }
 
+const intervalToTimeframe = (ms: number) => {
+  const seconds = ms / 1000;
+  if (seconds <= 60) {
+    return '1m';
+  }
+  if (seconds <= 60 * 5) {
+    return '5m';
+  }
+  if (seconds <= 60 * 15) {
+    return '15m';
+  }
+  if (seconds <= 60 * 60) {
+    return '1h';
+  }
+  if (seconds <= 60 * 60 * 2) {
+    return '2h';
+  }
+  if (seconds <= 60 * 60 * 4) {
+    return '4h';
+  }
+  if (seconds <= 60 * 60 * 24) {
+    return '1d';
+  }
+  if (seconds <= 60 * 60 * 24 * 7) {
+    return '1w';
+  }
+  return '1h';
+};
+
 const marketMomentumStrategy = async (
-  config: CCXTToolsArgs & { tickInterval: number },
+  config: CCXTToolsArgs,
   exchange: Exchange,
 ): CCXTStrategyResponse => {
   const { asset, base, allocation, spread } = config;
@@ -215,41 +251,40 @@ const marketMomentumStrategy = async (
  *  - BTC/USDC market
  *  - HyperLiquid Broker
  *  - 0.3 allocation
- *  - 1h timeframe
- *  - 1h tick interval
+ *  - 1h timeframe (1h tick interval)
  *  - 6 months historical data (August 2024 to February 2025)
- * Results: ~ +70% PnL
+ * Results: ~ +50% PnL
  *
  * @param config
  * @param exchange
  * @param isBackTest
  * @returns
  */
-const mmaBulishStrategy = async (
+const mmaBulishPerpStrategy = async (
   config: TickConfig & {
-    timeframe?: string;
     privateKey?: string;
-    tickInterval: number;
   },
   exchange: StrategyExchange,
   isBackTest: boolean = false,
 ): CCXTStrategyResponse => {
-  const logger = new CustomLogger(isBackTest ? 'CCXT Backtest' : 'CCXT');
-  const { asset, base, timeframe } = config;
+  const logger = isBackTest
+    ? // eslint-disable-next-line @typescript-eslint/no-unused-vars
+      { log: (...args) => {} }
+    : new CustomLogger('CCXT');
+  const { asset, base, tickInterval } = config;
   const market = `${asset}/${base}:${base}`;
-  const mmaTimeframe = timeframe ?? '1h';
+  const mmaTimeframe =
+    tickInterval > 0 ? intervalToTimeframe(tickInterval) : '1h';
   // eslint-disable-next-line prefer-const
   let { lastBuyPrice, lastHigerBuyPrice, lastCrossoverType } = getFromFile(
     isBackTest ? `_backtest_` + market : market,
   );
   try {
-    if (!isBackTest) {
-      logger.log(`=======================================`);
-      logger.log(`📄 Trading with the following parametters:`);
-      logger.log(`📈 Market: ${market}`);
-      logger.log(`🕒 Timeframe: ${mmaTimeframe}`);
-      logger.log(`🔍 Fetching last 50 candles...`);
-    }
+    logger.log(`=======================================`);
+    logger.log(`📄 Trading with the following parametters:`);
+    logger.log(`📈 Market: ${market}`);
+    logger.log(`🕒 Timeframe: ${mmaTimeframe}`);
+    logger.log(`🔍 Fetching last 50 candles...`);
     const ohlcv = await exchange.fetchOHLCV(
       market,
       mmaTimeframe,
@@ -259,18 +294,7 @@ const mmaBulishStrategy = async (
     if (ohlcv.length === 0) {
       throw new Error('No historical data available for the given period.');
     }
-    // Cancel all open orders not filled
-    const orders = await exchange.fetchOrders(market);
-    if (orders.length > 0) {
-      logger.log(`🗑️ Cancelling all previous orders (${orders.length})...`);
-      orders.forEach(async (order) => {
-        await exchange.cancelOrder(order.id, market);
-      });
-      logger.log('✅ Done! Orders cancelled.');
-    }
-    if (!isBackTest) {
-      logger.log(`📊 Calculating moving averages for ${market} market...`);
-    }
+    logger.log(`📊 Calculating moving averages for ${market} market...`);
     const { ma14, ma20, ma50 } = await calculateMovingAverages(ohlcv);
     const ticker = await exchange.fetchTicker(market);
     const currentPrice = ticker.bid;
@@ -287,29 +311,40 @@ const mmaBulishStrategy = async (
       ? lastBuyPrice - lastBuyPrice * config.spread > currentPrice
       : true;
     if (!config.privateKey) {
-      logger.log(
+      new CustomLogger(isBackTest ? 'CCXT Backtest' : 'CCXT').log(
         '🚨 Running in dry mode. No orders will be placed you have to provide privateKey to place orders',
       );
     }
     // display collected data
-    if (!isBackTest) {
-      logger.log(`📈 Current Price: ${currentPrice}`);
-      logger.log(`📈 MA20: ${ma20}`);
-      logger.log(`📈 MA50: ${ma50}`);
-      logger.log(`📅 Date: ${currentDate}`);
-      logger.log(
-        `💰 Portfolio: ${baseBalance} ${base} | ${assetBalance} ${asset}`,
-      );
-      logger.log(`📊 Last buy price: ${lastBuyPrice}`);
-      logger.log(`📊 Last higher buy price: ${lastHigerBuyPrice}`);
-      logger.log(`📊 Last crossover type: ${lastCrossoverType}`);
-      logger.log(`📊 is current price >= ma20: ${currentPrice >= ma20}`);
-      logger.log(`📊 is ma14 >= ma20: ${ma14 >= ma20}`);
-      logger.log(`📊 is base balance > 0: ${baseBalance > 0}`);
-      logger.log(
-        `📊 is current price lower than previous buy more than ${config.spread}%: ${isCurrentPriceLowerUsingSpreadThanLastBuyPrice}`,
-      );
-    }
+    logger.log('📄 Market Resume:');
+    logger.log(`📅 Date: ${currentDate}`);
+    logger.log(`📈 Current Price: ${currentPrice}`);
+    logger.log(`📈 MA14: ${ma14}`);
+    logger.log(`📈 MA20: ${ma20}`);
+    logger.log(`📈 MA50: ${ma50}`);
+    logger.log(`📊 Last buy price: ${lastBuyPrice}`);
+    logger.log(`📊 Last higher buy price: ${lastHigerBuyPrice}`);
+    logger.log(`📊 Last crossover type: ${lastCrossoverType}`);
+    logger.log(`📊 is current price >= ma20: ${currentPrice >= ma20}`);
+    logger.log(`📊 is ma14 >= ma20: ${ma14 >= ma20}`);
+    logger.log(`📊 is base balance > 10: ${baseBalance > 10}`);
+    logger.log(
+      `📊 is current price lower than previous buy more than ${config.spread}%: ${isCurrentPriceLowerUsingSpreadThanLastBuyPrice}`,
+    );
+    // Check if there is an open position
+    logger.log(`🔍 Fetching open positions for ${market} market...`);
+    const positions = await exchange.fetchPositions([market]);
+    const openPosition = positions.find(
+      (p) => p.symbol === market && p.side === 'long',
+    );
+    const positionSize = openPosition ? openPosition.contracts : 0;
+    logger.log(
+      `📊 Current Open position: ${
+        openPosition
+          ? `${openPosition.symbol} | PNL $${openPosition.unrealizedPnl?.toFixed(2)} (${openPosition.percentage?.toFixed(2)}%)`
+          : 0
+      }`,
+    );
     let action: -1 | 0 | 1 = 0; // 0: no action, 1: buy, -1: sell
     switch (true) {
       // Bullish cross (buy)
@@ -321,13 +356,19 @@ const mmaBulishStrategy = async (
         baseBalance * config.allocation > 10: {
         const amountToBuy = baseBalance * config.allocation; // X% Base portfolio
         const assetBought = amountToBuy / currentPrice;
-        logger.log(
-          `📈 [${currentDate}] Buy at ${currentPrice.toFixed(2)} | Bought ${assetBought.toFixed(
+        new CustomLogger(isBackTest ? 'CCXT Backtest' : 'CCXT').log(
+          `📈 [${currentDate}] Open LONG position at ${currentPrice.toFixed(2)} | Bought ${assetBought.toFixed(
             4,
           )} ${asset} | - ${amountToBuy.toFixed(2)} ${base}`,
         );
         if (config.privateKey) {
-          await exchange.createMarketBuyOrder(market, assetBought);
+          await exchange.createOrder(
+            market,
+            'market',
+            'buy',
+            assetBought,
+            currentPrice,
+          );
         }
         // update last values
         action = 1;
@@ -343,18 +384,21 @@ const mmaBulishStrategy = async (
       case (lastHigerBuyPrice ?? currentPrice) <= currentPrice &&
         currentPrice < ma50 &&
         lastCrossoverType !== 'bearish' &&
-        assetBalance > 0: {
+        !!openPosition: {
         if (config.privateKey) {
-          const amountToSell =
-            assetBalance *
-            (config.allocation * 5 >= 1 ? 1 : config.allocation * 5); // X%  portfolio asset
-          const baseGained = amountToSell * currentPrice;
-          logger.log(
-            `📉 [${currentDate}] Sell at ${currentPrice.toFixed(2)} | Sold ${amountToSell.toFixed(
+          const baseGained = positionSize * currentPrice;
+          new CustomLogger(isBackTest ? 'CCXT Backtest' : 'CCXT').log(
+            `📉 [${currentDate}] Close LONG position at ${currentPrice.toFixed(2)} | Sold ${positionSize.toFixed(
               4,
             )} ${asset} | Gained ${baseGained.toFixed(2)} ${base}`,
           );
-          await exchange.createMarketSellOrder(market, amountToSell);
+          await exchange.createOrder(
+            market,
+            'market',
+            'sell',
+            positionSize,
+            currentPrice,
+          );
         }
         // update last values
         action = -1;
@@ -364,25 +408,27 @@ const mmaBulishStrategy = async (
       }
       default:
         action = 0;
-        if (!isBackTest) {
-          logger.log(`📊 No action for ${market} market.`);
-        }
+        logger.log(`ℹ️  No action for ${market} market`);
         break;
     }
+    // Calculate PNL
+    const pnlUSD = openPosition ? openPosition.unrealizedPnl || 0 : 0;
+    const pnlPercent = openPosition ? openPosition.percentage || 0 : 0;
     const totalBaseBalance =
       assetBalance * ohlcv[ohlcv.length - 1][4] + baseBalance;
-    const totalAssetBalanceAsBaseValue =
-      assetBalance * ohlcv[ohlcv.length - 1][4];
-    if (!isBackTest) {
-      logger.log(`📊 Portfolio:`);
-      logger.log(`💰 Total ${base} Balance: ${totalBaseBalance}`);
-      logger.log(`💰 Total ${asset} Balance: ${totalAssetBalanceAsBaseValue}`);
-      logger.log(
-        `💰 Total Balance: ${(totalBaseBalance + totalAssetBalanceAsBaseValue).toFixed(2)}`,
-      );
-      logger.log(`Run tick in ${config.tickInterval}ms`);
-      logger.log(`=======================================`);
-    }
+    const totalAssetBalance = assetBalance + positionSize;
+    const totalAssetBalanceAsBaseValue = totalAssetBalance * currentPrice;
+    logger.log(`🏦 Portfolio:`);
+    logger.log(
+      `📈 Total open position amount: ${positionSize.toFixed(4)} ${asset} (${(positionSize * currentPrice).toFixed(2)} ${base})`,
+    );
+    logger.log(
+      `💰 Total: ${base} ${(totalBaseBalance + totalAssetBalanceAsBaseValue).toFixed(2)} (${totalBaseBalance.toFixed(2)} ${base} +  ${totalAssetBalance.toFixed(4)} ${asset})`,
+    );
+    logger.log(
+      `💰 Total pnl $${pnlUSD.toFixed(2)} (${pnlPercent.toFixed(2)}%)`,
+    );
+    logger.log(`⏲ Run tick in ${config.tickInterval}ms...`);
     // save last values
     writeToFile(
       {
@@ -401,12 +447,14 @@ const mmaBulishStrategy = async (
     };
     return response;
   } catch (error) {
-    logger.error(`Error: ${error.message}`);
+    new CustomLogger(isBackTest ? 'CCXT Backtest' : 'CCXT').error(
+      `Error: ${error.message}`,
+    );
   }
 };
 
 const TRADING_STRATEGIES = {
-  mmaBulishStrategy,
+  mmaBulishPerpStrategy,
   marketMomentumStrategy,
 };
 
@@ -438,9 +486,6 @@ const initCCXT = async (config: CCXTToolsArgs) => {
     logger.log('🧪 Enabling testnet mode');
     exchange.setSandboxMode(true);
   }
-  // set the leverage of orders
-  // const market = `${config.asset}/${config.base}:${config.base}`;
-  // exchange.setLeverage(2, market);
   // return exchange with logger
   return {
     exchange,
@@ -469,9 +514,7 @@ const initCCXT = async (config: CCXTToolsArgs) => {
   https://docs.ccxt.com/#/exchanges/hyperliquid
   https://github.com/ccxt/ccxt/blob/master/ts/src/test/tests.ts
  */
-export const runCCXTBot = async (
-  config: CCXTToolsArgs & { tickInterval: number },
-) => {
+export const runCCXTBot = async (config: CCXTToolsArgs) => {
   const { exchange, logger } = await initCCXT(config);
   // exchange.verbose = true;
   logger.log(`⚙ Running bot with config: 
@@ -486,28 +529,36 @@ export const runCCXTBot = async (
     logger.error(message);
     return { success: false, message, data: null };
   }
+  // set leverage level
+  const market = `${config.asset}/${config.base}:${config.base}`;
+  await exchange.setLeverage(LEVERAGE, market);
+  // set margin Mode
+  await exchange.setMarginMode('isolated', market, { leverage: LEVERAGE });
   // execute backtest before running the bot
   const backtestResult = await backtest(
     config,
     exchange,
-    TRADING_STRATEGIES.mmaBulishStrategy,
+    TRADING_STRATEGIES.mmaBulishPerpStrategy,
   );
   if (backtestResult.totalTrades <= 0 || backtestResult.pnlPercentage <= 5) {
-    throw new Error(
-      `Backtest failed. Please check the strategy: ${backtestResult}`,
-    );
+    return {
+      success: false,
+      message: '❌ Backtest failed. Please check strategy',
+      data: backtestResult,
+    };
   }
   // execute strategy
   if (config.tickInterval > 0) {
     logger.log(`🚀 Starting bot with interval of ${config.tickInterval}ms`);
     bootIsRuning = setInterval(
-      async () => await TRADING_STRATEGIES.mmaBulishStrategy(config, exchange),
+      async () =>
+        await TRADING_STRATEGIES.mmaBulishPerpStrategy(config, exchange),
       config.tickInterval,
     );
-    await TRADING_STRATEGIES.mmaBulishStrategy(config, exchange);
+    await TRADING_STRATEGIES.mmaBulishPerpStrategy(config, exchange);
   } else {
     logger.log('🚀 Running bot once');
-    await TRADING_STRATEGIES.mmaBulishStrategy(config, exchange);
+    await TRADING_STRATEGIES.mmaBulishPerpStrategy(config, exchange);
     bootIsRuning = null;
   }
   return {
@@ -533,14 +584,12 @@ export const stopCCXTBot = () => {
   };
 };
 
-export const backtestBot = async (
-  config: CCXTToolsArgs & { tickInterval: number },
-) => {
+export const backtestBot = async (config: CCXTToolsArgs) => {
   const { exchange } = await initCCXT(config);
   const backtestResult = await backtest(
     config,
     exchange,
-    TRADING_STRATEGIES.mmaBulishStrategy,
+    TRADING_STRATEGIES.mmaBulishPerpStrategy,
   );
   return {
     success: true,
@@ -560,9 +609,10 @@ const backtest = async (
 ) => {
   const logger = new CustomLogger('CCXT Backtest');
   logger.log(`🔍 Running backtest for ${config.asset}/${config.base} market`);
-  const { asset, base, timeframe } = config;
+  const { asset, base, tickInterval } = config;
   const market = `${asset}/${base}:${base}`;
-  const mmaTimeframe = timeframe ?? '1h';
+  const mmaTimeframe =
+    tickInterval > 0 ? intervalToTimeframe(tickInterval) : '1h';
   const now = Date.now();
   const sixMonthsAgo = now - 6 * 30 * 24 * 60 * 60 * 1000; // Approximation : 6 mois en millisecondes
   const ohlcv = await exchange.fetchOHLCV(market, mmaTimeframe, sixMonthsAgo);
@@ -589,6 +639,22 @@ const backtest = async (
         fetchOHLCV: async () => {
           return ohlcv.slice(i - 50, i);
         },
+        fetchPositions: async () => {
+          return assetBalance > 0
+            ? [
+                {
+                  symbol: market,
+                  side: 'long',
+                  amount: assetBalance,
+                  price: ohlcv[i][4],
+                  info: {},
+                  contracts: assetBalance,
+                  unrealizedPnl: 0,
+                  percentage: 0,
+                },
+              ]
+            : [];
+        },
         createMarketBuyOrder: async (...args) => {
           const amount = args[1];
           const price = ohlcv[i][4];
@@ -612,6 +678,18 @@ const backtest = async (
           return [] as any;
         },
         cancelOrder: async () => {
+          return {} as any;
+        },
+        createOrder: async (...args) => {
+          const amount = args[3];
+          const price = args[4];
+          if (args[2] === 'buy') {
+            baseBalance -= amount * price;
+            assetBalance += amount;
+          } else {
+            baseBalance += amount * price;
+            assetBalance -= amount;
+          }
           return {} as any;
         },
       },

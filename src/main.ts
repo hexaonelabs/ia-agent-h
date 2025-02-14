@@ -25,7 +25,6 @@ async function bootstrapServer() {
     .setTitle('Agent-H API Hub')
     .setDescription('Here you can find all the endpoints for the Agent-H API')
     .setVersion('1.0')
-    .addTag('agent-h')
     .addBearerAuth()
     .build();
   const document = SwaggerModule.createDocument(app, options);

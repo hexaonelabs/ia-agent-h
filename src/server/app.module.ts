@@ -10,6 +10,7 @@ import { SseSubjectService } from './sse-subject.service';
 import { JwtModule } from '@nestjs/jwt';
 import { LangchainChatController } from './langchain/langchain-chat.controller';
 import { LangchainChatService } from './langchain/langchain-chat.service';
+import { CCXTController } from './ccxt.controller';
 
 @Module({
   imports: [
@@ -23,7 +24,7 @@ import { LangchainChatService } from './langchain/langchain-chat.service';
       exclude: ['/api*', '/debug*'],
     }),
   ],
-  controllers: [AppController, LangchainChatController],
+  controllers: [AppController, LangchainChatController, CCXTController],
   providers: [
     AppService,
     LangchainChatService,
