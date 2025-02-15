@@ -6,6 +6,7 @@ import { TokenHolderGuard } from './token-holder.guard';
 import {
   backtestBot,
   CCXTToolsArgs,
+  fetchCCXTBalance,
   runCCXTBot,
   stopCCXTBot,
 } from '../tools/runCcxtTick';
@@ -128,6 +129,18 @@ export class CCXTController {
       message: message,
       success,
       data: null,
+    };
+  }
+
+  @Get('/fetchBalanceBot')
+  async fetchBalanceBot() {
+    const { message, success, data } = await fetchCCXTBalance({
+      broker: 'hyperliquid',
+    });
+    return {
+      message: message,
+      success,
+      data,
     };
   }
 }

@@ -458,7 +458,12 @@ const TRADING_STRATEGIES = {
   marketMomentumStrategy,
 };
 
-const initCCXT = async (config: CCXTToolsArgs) => {
+const initCCXT = async (
+  config: Pick<CCXTToolsArgs, 'broker'> & {
+    privateKey?: string;
+    walletAddress?: string;
+  },
+) => {
   const logger = new CustomLogger('CCXT');
   logger.log(`ℹ️  Initializing v${version} trading bot `);
   // Check if wallet address and private key are provided
@@ -490,6 +495,8 @@ const initCCXT = async (config: CCXTToolsArgs) => {
   return {
     exchange,
     logger,
+    walletAddress: config.walletAddress,
+    privateKey: config.privateKey,
   };
 };
 
@@ -798,5 +805,18 @@ export const runCCXTTick = async (
       orderPrice: orderType === 'sell' ? sellPrice : buyPrice,
       market,
     },
+  };
+};
+
+export const fetchCCXTBalance = async (
+  config: Pick<CCXTToolsArgs, 'broker'>,
+) => {
+  const { exchange, walletAddress } = await initCCXT(config);
+  const balance = await exchange.fetchBalance();
+  const positions = await exchange.fetchPositions();
+  return {
+    success: true,
+    message: '✅ Account balance & positions fetched',
+    data: { balance, positions, walletAddress },
   };
 };
